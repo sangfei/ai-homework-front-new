@@ -273,6 +273,20 @@ const CreateHomework: React.FC = () => {
       // 收集附件信息（传入当前状态中的附件）
       const collectedAttachments = collectAttachmentsFromForm(tasks, attachmentsByTask);
 
+      console.log('📋 收集到的附件信息:', {
+        attachmentsByTaskSize: attachmentsByTask.size,
+        collectedAttachmentsSize: collectedAttachments.size,
+        attachmentsByTaskEntries: Array.from(attachmentsByTask.entries()).map(([key, attachments]) => ({
+          key,
+          count: attachments.length,
+          taskNames: attachments.map(a => a.taskName)
+        })),
+        collectedAttachmentsEntries: Array.from(collectedAttachments.entries()).map(([key, attachments]) => ({
+          key,
+          count: attachments.length
+        }))
+      });
+
       // 执行完整的作业提交流程（包括创建和文件上传）
       console.log('🚀 开始执行完整的作业提交流程...');
       await executeHomeworkSubmissionFlow(requestData, collectedAttachments);

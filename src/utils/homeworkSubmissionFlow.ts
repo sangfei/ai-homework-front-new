@@ -223,10 +223,16 @@ const processAttachmentsSequentially = async (
  */
 export const executeHomeworkSubmissionFlow = async (
   requestData: CreateHomeworkRequest,
-  attachmentsByTask: Map<string, AttachmentInfo[]>
+  collectedAttachments: Map<string, AttachmentInfo[]>
 ): Promise<void> => {
   try {
     console.log('🚀 开始完整的作业提交流程...');
+    console.log('📊 输入参数检查:', {
+      hasRequestData: !!requestData,
+      requestDataTitle: requestData.title,
+      collectedAttachmentsSize: collectedAttachments.size,
+      collectedAttachmentsKeys: Array.from(collectedAttachments.keys())
+    });
     
     // 步骤1: 执行作业创建流程并等待完成
     console.log('📝 步骤1: 执行作业创建流程...');
@@ -241,7 +247,7 @@ export const executeHomeworkSubmissionFlow = async (
     // 步骤2: 获取附件信息
     console.log('📁 步骤2: 处理附件信息...');
     
-    if (attachmentsByTask.size === 0) {
+    if (collectedAttachments.size === 0) {
       console.log('ℹ️ 没有附件需要上传，流程完成');
       alert('作业创建成功！\n\n没有附件需要上传。');
       return;
@@ -251,7 +257,9 @@ export const executeHomeworkSubmissionFlow = async (
     console.log('🔍 步骤3: 匹配任务ID...');
     const taskMatches: TaskMatch[] = [];
     
-    for (const [taskName, attachments] of attachmentsByTask) {
+    for (const [taskName, attachments] of collectedAttachments) {
+      console.log(`🔍 处理任务: ${taskName}, 附件数量: ${attachments.length}`);
+      
       const taskId = matchTaskIdByName(taskName, creationResult.homeworkDetail);
       
       if (taskId === null) {
@@ -264,6 +272,8 @@ export const executeHomeworkSubmissionFlow = async (
         taskId,
         attachments
       });
+      
+      console.log(`✅ 任务匹配成功: ${taskName} -> taskId: ${taskId}`);
     }
     
     if (taskMatches.length === 0) {
