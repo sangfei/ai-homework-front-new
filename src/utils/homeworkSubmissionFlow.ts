@@ -361,7 +361,7 @@ export const collectAttachmentsFromForm = (
     
     console.log('📊 按任务组织的附件:', Array.from(taskAttachments.entries()).map(([name, files]) => ({
       taskName: name,
-      fileCount: files.length
+      fileCount: files.length,
       files: files.map(f => ({ name: f.file.name, type: f.type }))
     })));
     
