@@ -125,8 +125,20 @@ const CreateHomework: React.FC = () => {
 
   // 处理文件变化
   const handleFilesChange = (taskId: string, type: 'homework' | 'answer', files: any[]) => {
+    console.log('📁 文件变化回调触发:', {
+      taskId,
+      type,
+      filesCount: files.length,
+      files: files.map(f => ({
+        name: f.name,
+        status: f.status,
+        hasFile: !!f.file
+      }))
+    });
+
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
+      console.warn('⚠️ 未找到对应的任务:', taskId);
 
     const attachmentType = type === 'homework' ? 1 : 2;
     const attachments: AttachmentInfo[] = files
@@ -137,10 +149,22 @@ const CreateHomework: React.FC = () => {
         type: attachmentType
       }));
 
+    console.log('📋 处理后的附件信息:', {
+      taskName: task.taskTitle,
+      attachmentType,
+      attachmentsCount: attachments.length
+    });
     setAttachmentsByTask(prev => {
       const updated = new Map(prev);
       const key = `${taskId}-${type}`;
       updated.set(key, attachments);
+      
+      console.log('💾 更新附件状态:', {
+        key,
+        attachmentsCount: attachments.length,
+        totalKeys: updated.size
+      });
+      
       return updated;
     });
   };
@@ -179,6 +203,15 @@ const CreateHomework: React.FC = () => {
       newErrors.tasks = '至少需要一个有效的任务';
     }
 
+    // 验证每个任务的必填字段
+    tasks.forEach((task, index) => {
+      if (task.taskTitle.trim()) {
+        // 如果任务标题不为空，则任务描述也必须填写
+        if (!task.taskDescription.trim()) {
+          newErrors[`task_${task.id}_description`] = '任务描述为必填项';
+        }
+      }
+    });
     // 验证时间逻辑
     if (formData.publishTime && formData.ddlTime) {
       const publishDate = new Date(formData.publishTime);
@@ -499,15 +532,20 @@ const CreateHomework: React.FC = () => {
                     {/* 任务描述 */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        任务描述
+                        任务描述 <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         value={task.taskDescription}
                         onChange={(e) => updateTask(task.id, 'taskDescription', e.target.value)}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          errors[`task_${task.id}_description`] ? 'border-red-300' : 'border-gray-300'
+                        }`}
                         placeholder="请输入任务的详细描述..."
                       />
+                      {errors[`task_${task.id}_description`] && (
+                        <p className="mt-1 text-sm text-red-600">{errors[`task_${task.id}_description`]}</p>
+                      )}
                     </div>
                   </div>
 

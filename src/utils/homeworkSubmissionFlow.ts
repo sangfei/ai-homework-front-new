@@ -23,14 +23,43 @@ interface TaskMatch {
  * 从任务名称匹配homework_detail_for_update中的taskId
  */
 const matchTaskIdByName = (taskName: string, homeworkDetail: any): number | null => {
+  console.log('🔍 开始匹配任务ID:', {
+    taskName,
+    hasHomeworkDetail: !!homeworkDetail,
+    hasTaskList: !!(homeworkDetail && homeworkDetail.taskList)
+  });
+
   if (!homeworkDetail || !homeworkDetail.taskList) {
     console.warn('⚠️ homework_detail_for_update中没有taskList');
     return null;
   }
 
-  const matchedTask = homeworkDetail.taskList.find((task: any) => 
-    task.taskTitle === taskName || task.taskTitle.includes(taskName)
-  );
+  console.log('📋 可用任务列表:', homeworkDetail.taskList.map((t: any) => ({
+    id: t.id,
+    title: t.taskTitle
+  })));
+  // 更严格的匹配逻辑
+  const matchedTask = homeworkDetail.taskList.find((task: any) => {
+    const taskTitle = task.taskTitle || '';
+    const inputName = taskName || '';
+    
+    // 精确匹配
+    if (taskTitle === inputName) {
+      return true;
+    }
+    
+    // 去除空格后匹配
+    if (taskTitle.trim() === inputName.trim()) {
+      return true;
+    }
+    
+    // 包含匹配（双向）
+    if (taskTitle.includes(inputName) || inputName.includes(taskTitle)) {
+      return true;
+    }
+    
+    return false;
+  });
 
   if (matchedTask && matchedTask.id) {
     console.log('✅ 任务匹配成功:', {
@@ -280,38 +309,55 @@ export const executeHomeworkSubmissionFlow = async (
  */
 export const collectAttachmentsFromForm = (
   tasks: any[],
-  formAttachments?: Map<string, AttachmentInfo[]>
+  attachmentsByTask: Map<string, AttachmentInfo[]>
 ): Map<string, AttachmentInfo[]> => {
   const resultAttachments = new Map<string, AttachmentInfo[]>();
   
   console.log('📋 收集表单中的附件信息...');
+  console.log('📊 输入参数:', {
+    tasksCount: tasks.length,
+    attachmentsByTaskSize: attachmentsByTask.size,
+    attachmentsByTaskKeys: Array.from(attachmentsByTask.keys())
+  });
   
-  if (formAttachments && formAttachments.size > 0) {
-    console.log(`📁 找到 ${formAttachments.size} 个附件组`);
+  if (attachmentsByTask && attachmentsByTask.size > 0) {
+    console.log(`📁 找到 ${attachmentsByTask.size} 个附件组`);
     
     // 按任务名称重新组织附件
     const taskAttachments = new Map<string, AttachmentInfo[]>();
     
-    for (const [key, attachments] of formAttachments) {
+    for (const [key, attachments] of attachmentsByTask) {
+      console.log(`🔍 处理附件组: ${key}, 附件数量: ${attachments.length}`);
+      
       for (const attachment of attachments) {
         const taskName = attachment.taskName;
+        
+        if (!taskName || taskName.trim() === '') {
+          console.warn('⚠️ 跳过空任务名称的附件:', attachment);
+          continue;
+        }
         
         if (!taskAttachments.has(taskName)) {
           taskAttachments.set(taskName, []);
         }
         
         taskAttachments.get(taskName)!.push(attachment);
+        console.log(`✅ 附件已添加到任务 "${taskName}":`, {
+          fileName: attachment.file.name,
+          type: attachment.type === 1 ? '作业题目' : '作业答案'
+        });
       }
     }
     
     console.log('📊 按任务组织的附件:', Array.from(taskAttachments.entries()).map(([name, files]) => ({
       taskName: name,
       fileCount: files.length
+      files: files.map(f => ({ name: f.file.name, type: f.type }))
     })));
     
     return taskAttachments;
   }
   
-  console.log('ℹ️ 没有找到附件信息');
+  console.log('ℹ️ 没有找到附件信息，返回空Map');
   return new Map();
 };

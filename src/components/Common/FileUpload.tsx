@@ -143,6 +143,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
     if (newFiles.length > 0) {
       setFiles(prev => {
         const updated = [...prev, ...newFiles];
+        console.log('📁 文件列表更新:', {
+          component: type,
+          newFilesCount: newFiles.length,
+          totalFilesCount: updated.length,
+          files: updated.map(f => ({ name: f.name, status: f.status, hasFile: !!f.file }))
+        });
         onFilesChange?.(updated);
         return updated;
       });
@@ -151,6 +157,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
       for (const file of newFiles) {
         try {
           await simulateUpload(file);
+          // 上传成功后再次触发回调，确保状态同步
+          setFiles(prev => {
+            onFilesChange?.(prev);
+            return prev;
+          });
         } catch (error) {
           console.error('上传失败:', error);
         }
@@ -189,6 +200,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
     if (window.confirm('确定要删除这个文件吗？')) {
       setFiles(prev => {
         const updated = prev.filter(f => f.id !== fileId);
+        console.log('🗑️ 文件删除:', {
+          component: type,
+          deletedFileId: fileId,
+          remainingFilesCount: updated.length
+        });
         onFilesChange?.(updated);
         return updated;
       });
