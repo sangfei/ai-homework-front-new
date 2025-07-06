@@ -2,6 +2,7 @@
 
 import { executeHomeworkCreationFlow } from './homeworkFlow';
 import { uploadHomeworkAttachment } from '../services/fileUpload';
+import { updateHomeworkDetail } from '../services/homework';
 import { getTenantId } from '../services/auth';
 import type { CreateHomeworkRequest } from '../services/homework';
 
@@ -297,11 +298,29 @@ export const executeHomeworkSubmissionFlow = async (
     console.log('📋 步骤5: 显示最终结果...');
     const updatedHomeworkDetail = (window as any).homework_detail_for_update;
     
-    console.log('🎉 作业提交流程全部完成！');
-    console.log('📄 最终的homework_detail_for_update:', updatedHomeworkDetail);
+    // 步骤6: 更新作业详情
+    console.log('🔄 步骤6: 更新作业详情...');
+    try {
+      await updateHomeworkDetail(updatedHomeworkDetail);
+      console.log('✅ 步骤6完成 - 作业更新成功');
+      
+      // 显示成功提示框
+      alert('作业更新成功');
+      
+      // 用户点击确定后跳转到作业管理页面
+      window.location.href = '/homework';
+      
+    } catch (updateError) {
+      console.error('❌ 作业更新失败:', updateError);
+      
+      // 显示错误信息
+      const errorMessage = updateError instanceof Error ? updateError.message : '作业更新失败';
+      alert(`作业更新失败: ${errorMessage}\n\n请稍后重试或联系管理员。`);
+      
+      throw new Error(`作业更新失败: ${errorMessage}`);
+    }
     
-    // 显示成功信息
-    alert(`作业提交成功！\n\n📝 作业标题: ${updatedHomeworkDetail.title}\n🆔 作业ID: ${updatedHomeworkDetail.id}\n📁 已上传附件: ${taskMatches.reduce((sum, match) => sum + match.attachments.length, 0)}个\n\n详细信息请查看控制台。`);
+    console.log('🎉 作业提交流程全部完成！');
     
   } catch (error) {
     console.error('❌ 作业提交流程失败:', error);

@@ -235,6 +235,42 @@ export const updateHomework = async (id: string, data: Partial<HomeworkItem>): P
 };
 
 /**
+ * 更新作业详情（使用homework_detail_for_update数据）
+ */
+export const updateHomeworkDetail = async (homeworkDetail: any): Promise<any> => {
+  try {
+    console.log('📤 发送作业更新请求:', homeworkDetail);
+    
+    const response = await authenticatedFetch(
+      'http://localhost:48084/admin-api/homework/homework-tasks/update',
+      {
+        method: 'PUT',
+        headers: {
+          'Accept': '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(homeworkDetail)
+      }
+    );
+
+    console.log('📡 收到作业更新响应:', response.status, response.statusText);
+    
+    const result = await response.json();
+    console.log('📋 作业更新响应数据:', result);
+    
+    if (result.code !== 0) {
+      console.error('❌ 作业更新失败 - 服务器返回错误:', result);
+      throw new Error(result.msg || '作业更新失败');
+    }
+
+    console.log('✅ 作业更新成功');
+    return result.data;
+  } catch (error) {
+    console.error('作业更新失败:', error);
+    throw error;
+  }
+};
+/**
  * 删除作业
  */
 export const deleteHomework = async (id: string): Promise<any> => {
