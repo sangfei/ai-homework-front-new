@@ -1,115 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Users, Eye, Edit, Trash2, RefreshCw, Search, CheckCircle } from 'lucide-react';
-import DeleteConfirmModal from '../Common/DeleteConfirmModal';
+import { Plus, Search, RefreshCw, Filter } from 'lucide-react';
+import { useHomeworkList } from '../../hooks/useHomework';
+import { useClassSelectOptions } from '../../hooks/useClasses';
+import HomeworkCard from './HomeworkCard';
 import ClassSelect from '../Common/ClassSelect';
-
-interface Homework {
-  id: string;
-  title: string;
-  subject: string;
-  class: string;
-  date: string;
-  status: 'published' | 'completed' | 'overdue' | 'unpublished';
-  tasks: string[];
-  completionRate: number;
-  statusColor: string;
-}
+import DeleteConfirmModal from '../Common/DeleteConfirmModal';
+import { deleteHomework, type HomeworkQueryParams } from '../../services/homework';
 
 const HomeworkList: React.FC = () => {
   const navigate = useNavigate();
-  const [homeworks] = useState<Homework[]>([
-    {
-      id: '1',
-      title: '拼音复习作业',
-      subject: '语文',
-      class: '一年级(1)班',
-      date: '2025-06-03',
-      status: 'published',
-      tasks: ['完成课本78-79页课后习题', '预习《声母与韵母》一课'],
-      completionRate: 75,
-      statusColor: 'bg-blue-100 text-blue-800'
-    },
-    {
-      id: '2',
-      title: '20以内加减法练习',
-      subject: '数学',
-      class: '一年级(2)班',
-      date: '2025-06-02',
-      status: 'completed',
-      tasks: ['完成《数学练习册》第15-16页', '完成《提高班冲刺题》'],
-      completionRate: 100,
-      statusColor: 'bg-green-100 text-green-800'
-    },
-    {
-      id: '3',
-      title: '英语单词拼写练习',
-      subject: '英语',
-      class: '三年级(1)班',
-      date: '2025-06-04',
-      status: 'unpublished',
-      tasks: ['完成26个字母书写练习', '背诵课文《My Family》'],
-      completionRate: 0,
-      statusColor: 'bg-purple-100 text-purple-800'
-    },
-    {
-      id: '4',
-      title: '植物观察日记',
-      subject: '科学',
-      class: '二年级(2)班',
-      date: '2025-06-01',
-      status: 'overdue',
-      tasks: ['观察一种植物的生长过程并记录', '完成《植物的生长》思考题'],
-      completionRate: 30,
-      statusColor: 'bg-orange-100 text-orange-800'
-    }
-  ]);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState({
-    subject: '全部科目',
-    grade: '全部班级',
-    status: '全部状态',
+  const { selectOptions: classOptions, loading: classLoading } = useClassSelectOptions();
+  
+  // 筛选参数状态
+  const [filters, setFilters] = useState<HomeworkQueryParams>({
+    deptIds: '',
+    subject: '',
+    pageNo: 1,
+    pageSize: 10,
     startDate: '',
-    endDate: ''
+    endDate: '',
+    status: ''
   });
+
+  // 使用自定义Hook获取作业数据
+  const { homeworks, loading, error, pagination, refetch, changePage } = useHomeworkList(filters);
+
+  // 删除确认弹窗状态
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [homeworkToDelete, setHomeworkToDelete] = useState<string | null>(null);
 
-  const getStatusText = (status: string) => {
-    const statusMap = {
-      'published': '已发布',
-      'completed': '已完成',
-      'overdue': '已逾期',
-      'unpublished': '未发布'
+  // 科目选项
+  const subjectOptions = [
+    { value: '', label: '全部科目' },
+    { value: '语文', label: '语文' },
+    { value: '数学', label: '数学' },
+    { value: '英语', label: '英语' },
+    { value: '物理', label: '物理' },
+    { value: '化学', label: '化学' },
+    { value: '生物', label: '生物' },
+    { value: '历史', label: '历史' },
+    { value: '地理', label: '地理' },
+    { value: '政治', label: '政治' }
+  ];
+
+  // 状态选项
+  const statusOptions = [
+    { value: '', label: '全部状态' },
+    { value: 'published', label: '已发布' },
+    { value: 'completed', label: '已完成' },
+    { value: 'overdue', label: '已逾期' },
+    { value: 'draft', label: '草稿' }
+  ];
+
+  // 处理筛选参数变化
+  const handleFilterChange = useCallback((key: keyof HomeworkQueryParams, value: string | number) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      pageNo: 1 // 重置到第一页
+    }));
+  }, []);
+
+  // 执行查询
+  const handleSearch = useCallback(() => {
+    refetch(filters);
+  }, [filters, refetch]);
+
+  // 重置筛选条件
+  const handleReset = useCallback(() => {
+    const resetFilters: HomeworkQueryParams = {
+      deptIds: '',
+      subject: '',
+      pageNo: 1,
+      pageSize: 10,
+      startDate: '',
+      endDate: '',
+      status: ''
     };
-    return statusMap[status] || status;
-  };
+    setFilters(resetFilters);
+    refetch(resetFilters);
+  }, [refetch]);
 
-  const getProgressBarColor = (rate: number) => {
-    if (rate === 100) return 'bg-green-500';
-    if (rate >= 75) return 'bg-blue-500';
-    if (rate >= 50) return 'bg-yellow-500';
-    if (rate > 0) return 'bg-orange-500';
-    return 'bg-gray-300';
-  };
+  // 处理分页变化
+  const handlePageChange = useCallback((page: number) => {
+    const newFilters = { ...filters, pageNo: page };
+    setFilters(newFilters);
+    changePage(page);
+  }, [filters, changePage]);
 
+  // 处理删除操作
   const handleDeleteClick = (homeworkId: string) => {
     setHomeworkToDelete(homeworkId);
     setShowDeleteModal(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (homeworkToDelete) {
-      // 这里处理删除逻辑
-      console.log('删除作业:', homeworkToDelete);
-      
-      // 显示成功提示
-      // 可以使用 toast 或其他提示组件
-      alert('作业删除成功！');
-      
-      // 重置状态
-      setHomeworkToDelete(null);
+      try {
+        await deleteHomework(homeworkToDelete);
+        setHomeworkToDelete(null);
+        refetch(filters); // 重新获取数据
+        alert('作业删除成功！');
+      } catch (error) {
+        console.error('删除作业失败:', error);
+        alert('删除作业失败，请稍后重试');
+      }
     }
   };
 
@@ -118,52 +114,17 @@ const HomeworkList: React.FC = () => {
     setHomeworkToDelete(null);
   };
 
-  const getActionButtons = (homework: Homework) => {
-    const baseButtons = [
-      { icon: Eye, text: '详情', color: 'text-blue-600 hover:text-blue-800' },
-      { 
-        icon: CheckCircle, 
-        text: '批改', 
-        color: 'text-green-600 hover:text-green-800',
-        onClick: () => navigate(`/homework/grading/${homework.id}`)
-      }
-    ];
-
-    if (homework.status === 'unpublished') {
-      return [
-        { icon: Calendar, text: '发布', color: 'text-blue-600 hover:text-blue-800' },
-        { icon: Edit, text: '编辑', color: 'text-gray-600 hover:text-gray-800' },
-        { icon: Eye, text: '详情', color: 'text-blue-600 hover:text-blue-800' },
-        { 
-          icon: CheckCircle, 
-          text: '批改', 
-          color: 'text-green-600 hover:text-green-800',
-          onClick: () => navigate(`/homework/grading/${homework.id}`)
-        },
-        { 
-          icon: Trash2, 
-          text: '删除', 
-          color: 'text-red-600 hover:text-red-800',
-          onClick: () => handleDeleteClick(homework.id)
-        }
-      ];
-    }
-
-    if (homework.status === 'overdue') {
-      return [
-        ...baseButtons,
-        { icon: RefreshCw, text: '撤回', color: 'text-orange-600 hover:text-orange-800' }
-      ];
-    }
-
-    return baseButtons;
+  // 处理编辑操作
+  const handleEdit = (homeworkId: string) => {
+    navigate(`/homework/edit/${homeworkId}`);
   };
 
-  const itemsPerPage = 4;
-  const totalPages = Math.ceil(homeworks.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentHomeworks = homeworks.slice(startIndex, startIndex + itemsPerPage);
+  // 处理批改操作
+  const handleGrade = (homeworkId: string) => {
+    navigate(`/homework/grading/${homeworkId}`);
+  };
 
+  // 创建新作业
   const handleCreateHomework = () => {
     navigate('/homework/create');
   };
@@ -172,80 +133,230 @@ const HomeworkList: React.FC = () => {
     <div className="space-y-6">
       {/* 页面标题 */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">作业管理</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">作业管理</h1>
+          <p className="text-gray-600">管理和查看所有作业任务</p>
+        </div>
         <button
           onClick={handleCreateHomework}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>新建作业</span>
         </button>
       </div>
 
-      {/* 查询条件区域 */}
+      {/* 筛选区域 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+          {/* 班级筛选 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">班级</label>
+            <ClassSelect
+              value={filters.deptIds}
+              onChange={(value) => handleFilterChange('deptIds', value.toString())}
+              emptyLabel="全部班级"
+              loading={classLoading}
+            />
+          </div>
+          
+          {/* 科目筛选 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">科目</label>
             <select
               value={filters.subject}
-              onChange={(e) => setFilters({...filters, subject: e.target.value})}
+              onChange={(e) => handleFilterChange('subject', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option>全部科目</option>
-              <option>语文</option>
-              <option>数学</option>
-              <option>英语</option>
-              <option>科学</option>
+              {subjectOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">班级</label>
-            <ClassSelect
-              value={filters.grade}
-              onChange={(value) => setFilters({...filters, grade: value.toString()})}
-              emptyLabel="全部班级"
-            />
-          </div>
-          
+          {/* 状态筛选 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">状态</label>
             <select
               value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option>全部状态</option>
-              <option>已发布</option>
-              <option>已完成</option>
-              <option>已逾期</option>
-              <option>未发布</option>
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
           
+          {/* 时间范围 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">发布时间范围</label>
-            <div className="flex space-x-2">
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({...filters, startDate: e.target.value})}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="-/-/-"
-              />
-              <span className="flex items-center text-gray-500">至</span>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({...filters, endDate: e.target.value})}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="-/-/-"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">开始时间</label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">结束时间</label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
         
+        {/* 操作按钮 */}
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={handleReset}
+            disabled={loading}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>重置</span>
+          </button>
+          <button
+            onClick={handleSearch}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 transition-colors disabled:opacity-50"
+          >
+            <Search className="w-4 h-4" />
+            <span>查询</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 作业列表 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        {/* 列表头部 */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Filter className="w-5 h-5 text-gray-500" />
+              <span className="text-lg font-semibold text-gray-900">作业列表</span>
+              {!loading && (
+                <span className="text-sm text-gray-500">
+                  (共 {pagination.total} 条记录)
+                </span>
+              )}
+            </div>
+            {loading && (
+              <div className="flex items-center space-x-2 text-gray-500">
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm">加载中...</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 列表内容 */}
+        <div className="p-6">
+          {error ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-red-600 text-2xl">⚠️</span>
+                </div>
+                <h3 className="text-lg font-semibold text-red-900 mb-2">加载失败</h3>
+                <p className="text-red-600 mb-4">{error}</p>
+                <button
+                  onClick={() => refetch(filters)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  重新加载
+                </button>
+              </div>
+            </div>
+          ) : homeworks.length === 0 && !loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plus className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">暂无作业</h3>
+                <p className="text-gray-600 mb-4">还没有创建任何作业</p>
+                <button
+                  onClick={handleCreateHomework}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  创建第一个作业
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* 作业卡片网格 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {homeworks.map((homework) => (
+                  <HomeworkCard
+                    key={homework.id}
+                    homework={homework}
+                    onEdit={handleEdit}
+                    onDelete={handleDeleteClick}
+                    onGrade={handleGrade}
+                  />
+                ))}
+              </div>
+
+              {/* 分页组件 */}
+              {pagination.total > 0 && (
+                <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+                  <div className="text-sm text-gray-700">
+                    显示第 {((pagination.pageNo - 1) * pagination.pageSize) + 1} 至{' '}
+                    {Math.min(pagination.pageNo * pagination.pageSize, pagination.total)} 条，
+                    共 {pagination.total} 条记录
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handlePageChange(Math.max(1, pagination.pageNo - 1))}
+                      disabled={pagination.pageNo === 1 || loading}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      上一页
+                    </button>
+                    
+                    {/* 页码按钮 */}
+                    {Array.from({ length: Math.min(5, Math.ceil(pagination.total / pagination.pageSize)) }, (_, i) => {
+                      const page = i + 1;
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          disabled={loading}
+                          className={`px-3 py-1 rounded text-sm ${
+                            pagination.pageNo === page
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-100'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={() => handlePageChange(pagination.pageNo + 1)}
+                      disabled={pagination.pageNo >= Math.ceil(pagination.total / pagination.pageSize) || loading}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      下一页
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       {/* 删除确认弹窗 */}
       <DeleteConfirmModal
@@ -257,130 +368,6 @@ const HomeworkList: React.FC = () => {
         confirmText="确认删除"
         cancelText="取消"
       />
-        <div className="flex justify-end space-x-3">
-          <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
-            <RefreshCw className="w-4 h-4" />
-            <span>重置</span>
-          </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
-            <Search className="w-4 h-4" />
-            <span>筛选</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 作业卡片展示区域 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {currentHomeworks.map((homework) => (
-          <div key={homework.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            {/* 卡片头部 */}
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">{homework.title}</h3>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${homework.statusColor}`}>
-                    {getStatusText(homework.status)}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                  <div className="flex items-center space-x-1">
-                    <span className="w-3 h-3 bg-gray-400 rounded-full"></span>
-                    <span>{homework.subject}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Users className="w-4 h-4" />
-                    <span>{homework.class}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>{homework.date}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 任务列表 */}
-            <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">任务列表：</h4>
-              <div className="space-y-2">
-                {homework.tasks.map((task, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600">完成 {task}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 批改进度 */}
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">批改进度：</span>
-                <span className="text-sm font-medium text-gray-900">{homework.completionRate}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full ${getProgressBarColor(homework.completionRate)}`}
-                  style={{ width: `${homework.completionRate}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* 操作按钮 */}
-            <div className="flex items-center justify-end space-x-4">
-              {getActionButtons(homework).map((action, index) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={index}
-                    onClick={action.onClick}
-                    className={`flex items-center space-x-1 text-sm ${action.color}`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{action.text}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* 分页组件 */}
-      <div className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">
-        <div className="text-sm text-gray-700">
-          显示第 {startIndex + 1} 至 {Math.min(startIndex + itemsPerPage, homeworks.length)} 条，共 {homeworks.length} 条记录
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            上一页
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`px-3 py-1 rounded text-sm ${
-                currentPage === page
-                  ? 'bg-blue-600 text-white'
-                  : 'border border-gray-300 hover:bg-gray-100'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-          <button
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            下一页
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
