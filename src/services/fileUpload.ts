@@ -50,7 +50,7 @@ export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promi
     formData.append('file', params.file);
 
     // 发送请求 - 注意：文件上传不需要设置Content-Type，让浏览器自动设置
-    const response = await fetch('/admin-api/homework/homework-tasks/upload-independent-attachment', {
+    const response = await fetch('http://localhost:48080/admin-api/homework/homework-tasks/upload-independent-attachment', {
       method: 'POST',
       headers: {
         'Accept': '*/*',

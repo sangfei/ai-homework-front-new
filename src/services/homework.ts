@@ -141,7 +141,7 @@ export const createHomework = async (data: CreateHomeworkRequest): Promise<numbe
     console.log('📤 发送创建作业请求:', data);
     
     const response = await authenticatedFetch(
-      'http://localhost:48084/admin-api/homework/homework-tasks/create',
+      'http://localhost:48080/admin-api/homework/homework-tasks/create',
       {
         method: 'POST',
         headers: {
@@ -181,7 +181,7 @@ export const createHomework = async (data: CreateHomeworkRequest): Promise<numbe
 export const getHomeworkDetail = async (homeworkId: number): Promise<HomeworkDetailResponse['data']> => {
   try {
     const response = await authenticatedFetch(
-      `http://localhost:48084/admin-api/homework/homework-tasks/get?id=${homeworkId}`,
+      `http://localhost:48080/admin-api/homework/homework-tasks/get?id=${homeworkId}`,
       {
         method: 'GET',
         headers: {
