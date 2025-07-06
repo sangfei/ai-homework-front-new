@@ -46,11 +46,27 @@ export const createAuthenticatedRequest = (url: string, options: RequestInit = {
 export const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
   const requestOptions = createAuthenticatedRequest(url, options);
   
+  // 调试信息
+  console.log('🌐 发送认证请求:', {
+    url,
+    method: options.method || 'GET',
+    headers: requestOptions.headers,
+    hasBody: !!options.body
+  });
+  
   try {
     const response = await fetch(url, requestOptions);
     
+    console.log('📡 收到响应:', {
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
+    
     // 如果返回401，说明token过期，清除token
     if (response.status === 401) {
+      console.warn('🔒 认证失败，清除token并跳转登录页');
       clearAccessToken();
       // 可以在这里触发重新登录逻辑
       window.location.href = '/login';
@@ -58,7 +74,10 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
     
     return response;
   } catch (error) {
-    console.error('请求失败:', error);
+    console.error('🚨 请求失败:', {
+      url,
+      error: error instanceof Error ? error.message : error
+    });
     throw error;
   }
 };

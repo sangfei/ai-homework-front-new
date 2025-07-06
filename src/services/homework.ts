@@ -58,6 +58,39 @@ export interface CreateHomeworkRequest {
   }[];
 }
 
+// 创建作业响应
+export interface CreateHomeworkResponse {
+  code: number;
+  data: number; // 作业ID
+  msg: string;
+}
+
+// 作业详情响应
+export interface HomeworkDetailResponse {
+  code: number;
+  data: {
+    id: number;
+    title: string;
+    deptId: number;
+    subject: string;
+    assignedDate: number;
+    publishTime: number;
+    ddlTime: number;
+    description?: string;
+    taskList: {
+      id?: number;
+      taskTitle: string;
+      taskDescription: string;
+      taskQuestion: any[];
+      taskAnswer: any[];
+    }[];
+    status?: string;
+    createTime?: number;
+    updateTime?: number;
+  };
+  msg: string;
+}
+
 /**
  * 获取作业列表（分页查询）
  */
@@ -103,7 +136,7 @@ export const getHomeworkList = async (params: HomeworkQueryParams = {}): Promise
 /**
  * 创建作业
  */
-export const createHomework = async (data: CreateHomeworkRequest): Promise<any> => {
+export const createHomework = async (data: CreateHomeworkRequest): Promise<CreateHomeworkResponse> => {
   try {
     const response = await authenticatedFetch(
       'http://localhost:48084/admin-api/homework/homework-tasks/create',
@@ -117,7 +150,7 @@ export const createHomework = async (data: CreateHomeworkRequest): Promise<any> 
       }
     );
 
-    const result = await response.json();
+    const result: CreateHomeworkResponse = await response.json();
     
     if (result.code !== 0) {
       throw new Error(result.msg || '创建作业失败');
@@ -126,6 +159,35 @@ export const createHomework = async (data: CreateHomeworkRequest): Promise<any> 
     return result.data;
   } catch (error) {
     console.error('创建作业失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 获取作业详情
+ */
+export const getHomeworkDetail = async (homeworkId: number): Promise<HomeworkDetailResponse['data']> => {
+  try {
+    const response = await authenticatedFetch(
+      `http://localhost:48084/admin-api/homework/homework-tasks/get?id=${homeworkId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': '*/*',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      }
+    );
+
+    const result: HomeworkDetailResponse = await response.json();
+    
+    if (result.code !== 0) {
+      throw new Error(result.msg || '获取作业详情失败');
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error('获取作业详情失败:', error);
     throw error;
   }
 };

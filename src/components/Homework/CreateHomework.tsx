@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import ClassSelect from '../Common/ClassSelect';
 import FileUpload from '../Common/FileUpload';
 import { useClassSelectOptions } from '../../hooks/useClasses';
-import { createHomework, type CreateHomeworkRequest } from '../../services/homework';
+import { type CreateHomeworkRequest } from '../../services/homework';
+import { executeHomeworkCreationFlow, validateGlobalVariables } from '../../utils/homeworkFlow';
 
 interface Task {
   id: string;
@@ -84,6 +85,13 @@ const CreateHomework: React.FC = () => {
         ...prev,
         deptId: classOptions[0].value
       }));
+    }
+    
+    // 验证全局变量
+    const validation = validateGlobalVariables();
+    if (!validation.isValid) {
+      console.warn('⚠️ 检测到缺少必需的全局变量:', validation.missing);
+      console.warn('请确保已正确登录并设置了 tenantId 和 accessToken');
     }
   }, [classOptions, formData.deptId]);
 
@@ -170,6 +178,12 @@ const CreateHomework: React.FC = () => {
       return;
     }
 
+    // 提交前再次验证全局变量
+    const validation = validateGlobalVariables();
+    if (!validation.isValid) {
+      alert(`缺少必需的认证信息: ${validation.missing.join(', ')}\n请重新登录后再试`);
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -191,13 +205,11 @@ const CreateHomework: React.FC = () => {
           }))
       };
 
-      console.log('提交作业数据:', requestData);
-
-      // 调用API创建作业
-      await createHomework(requestData);
+      // 执行完整的作业创建流程
+      const result = await executeHomeworkCreationFlow(requestData);
 
       // 成功提示
-      alert('作业创建成功！');
+      alert(`作业创建成功！\n作业ID: ${result.homeworkId}\n作业标题: ${result.homeworkDetail.title}`);
       
       // 跳转回作业列表
       navigate('/homework');
