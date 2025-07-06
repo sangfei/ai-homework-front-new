@@ -42,6 +42,22 @@ export interface HomeworkQueryParams {
   status?: string;
 }
 
+// 创建作业请求参数
+export interface CreateHomeworkRequest {
+  title: string;
+  deptId: number;
+  subject: string;
+  assignedDate: number;
+  publishTime: number;
+  ddlTime: number;
+  taskList: {
+    taskTitle: string;
+    taskDescription: string;
+    taskQuestion: any[];
+    taskAnswer: any[];
+  }[];
+}
+
 /**
  * 获取作业列表（分页查询）
  */
@@ -87,15 +103,15 @@ export const getHomeworkList = async (params: HomeworkQueryParams = {}): Promise
 /**
  * 创建作业
  */
-export const createHomework = async (data: Partial<HomeworkItem>): Promise<any> => {
+export const createHomework = async (data: CreateHomeworkRequest): Promise<any> => {
   try {
     const response = await authenticatedFetch(
-      'http://localhost:48080/admin-api/homework/homework-tasks',
+      'http://localhost:48084/admin-api/homework/homework-tasks/create',
       {
         method: 'POST',
         headers: {
+          'Accept': '*/*',
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
         body: JSON.stringify(data)
       }
