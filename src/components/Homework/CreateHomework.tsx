@@ -5,7 +5,8 @@ import ClassSelect from '../Common/ClassSelect';
 import FileUpload from '../Common/FileUpload';
 import { useClassSelectOptions } from '../../hooks/useClasses';
 import { type CreateHomeworkRequest } from '../../services/homework';
-import { executeHomeworkCreationFlow, validateGlobalVariables } from '../../utils/homeworkFlow';
+import { validateGlobalVariables } from '../../utils/homeworkFlow';
+import { executeHomeworkSubmissionFlow, collectAttachmentsFromForm, type AttachmentInfo } from '../../utils/homeworkSubmissionFlow';
 
 interface Task {
   id: string;
@@ -25,6 +26,9 @@ interface FormData {
 const CreateHomework: React.FC = () => {
   const navigate = useNavigate();
   const { selectOptions: classOptions, loading: classLoading } = useClassSelectOptions();
+  
+  // 附件管理状态
+  const [attachmentsByTask, setAttachmentsByTask] = useState<Map<string, AttachmentInfo[]>>(new Map());
   
   // 科目选项
   const subjectOptions = [
@@ -119,6 +123,28 @@ const CreateHomework: React.FC = () => {
     ));
   };
 
+  // 处理文件变化
+  const handleFilesChange = (taskId: string, type: 'homework' | 'answer', files: any[]) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const attachmentType = type === 'homework' ? 1 : 2;
+    const attachments: AttachmentInfo[] = files
+      .filter(f => f.status === 'success' && f.file)
+      .map(f => ({
+        file: f.file,
+        taskName: task.taskTitle,
+        type: attachmentType
+      }));
+
+    setAttachmentsByTask(prev => {
+      const updated = new Map(prev);
+      const key = `${taskId}-${type}`;
+      updated.set(key, attachments);
+      return updated;
+    });
+  };
+
   // 表单验证
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -211,31 +237,24 @@ const CreateHomework: React.FC = () => {
 
       console.log('📋 准备提交的数据:', requestData);
 
-      // 执行完整的作业创建流程
-      console.log('🚀 开始执行作业创建流程...');
-      const result = await executeHomeworkCreationFlow(requestData);
+      // 收集附件信息（传入当前状态中的附件）
+      const collectedAttachments = collectAttachmentsFromForm(tasks, attachmentsByTask);
 
-      console.log('✅ 作业创建流程执行成功:', result);
+      // 执行完整的作业提交流程（包括创建和文件上传）
+      console.log('🚀 开始执行完整的作业提交流程...');
+      await executeHomeworkSubmissionFlow(requestData, collectedAttachments);
 
-      // 成功提示 - 使用更友好的提示
-      const successMessage = `作业创建成功！\n\n` +
-        `📝 作业标题: ${result.homeworkDetail.title}\n` +
-        `🆔 作业ID: ${result.homeworkId}\n` +
-        `📚 科目: ${result.homeworkDetail.subject}\n` +
-        `👥 班级ID: ${result.homeworkDetail.deptId}\n` +
-        `📅 截止时间: ${new Date(result.homeworkDetail.ddlTime).toLocaleString()}`;
-      
-      alert(successMessage);
+      console.log('✅ 作业提交流程执行成功');
       
       // 跳转回作业列表
       console.log('🔄 跳转回作业列表页面');
       navigate('/homework');
       
     } catch (error) {
-      console.error('创建作业失败:', error);
+      console.error('提交作业失败:', error);
       
       // 提供更详细的错误信息
-      let errorMessage = '创建作业失败';
+      let errorMessage = '提交作业失败';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -254,7 +273,7 @@ const CreateHomework: React.FC = () => {
       alert(errorMessage);
     } finally {
       setIsSubmitting(false);
-      console.log('🏁 作业创建流程结束');
+      console.log('🏁 作业提交流程结束');
     }
   };
 
@@ -502,7 +521,7 @@ const CreateHomework: React.FC = () => {
                           type="homework"
                           onFilesChange={(files) => {
                             console.log('作业附件文件变化:', files);
-                            // 这里可以保存文件信息到状态中
+                            handleFilesChange(task.id, 'homework', files);
                           }}
                         />
                       </div>
@@ -513,7 +532,7 @@ const CreateHomework: React.FC = () => {
                           type="answer"
                           onFilesChange={(files) => {
                             console.log('答案附件文件变化:', files);
-                            // 这里可以保存文件信息到状态中
+                            handleFilesChange(task.id, 'answer', files);
                           }}
                         />
                       </div>

@@ -8,6 +8,7 @@ interface UploadedFile {
   status: 'uploading' | 'success' | 'error';
   progress: number;
   error?: string;
+  file?: File; // 保存原始文件对象
 }
 
 interface FileUploadProps {
@@ -132,7 +133,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
         name: file.name,
         size: file.size,
         status: 'uploading',
-        progress: 0
+        progress: 0,
+        file: file // 保存原始文件对象
       };
 
       newFiles.push(uploadFile);
