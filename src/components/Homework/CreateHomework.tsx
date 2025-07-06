@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X, Plus, Upload, Trash2, Info, Calendar, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ClassSelect from '../Common/ClassSelect';
+import FileUpload from '../Common/FileUpload';
 import { useClassSelectOptions } from '../../hooks/useClasses';
 import { createHomework, type CreateHomeworkRequest } from '../../services/homework';
 
@@ -440,6 +441,34 @@ const CreateHomework: React.FC = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="请输入任务的详细描述..."
                       />
+                    </div>
+                  </div>
+
+                  {/* 文件上传区域 */}
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-4">文件上传</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* 作业附件上传 */}
+                      <div>
+                        <FileUpload
+                          type="homework"
+                          onFilesChange={(files) => {
+                            console.log('作业附件文件变化:', files);
+                            // 这里可以保存文件信息到状态中
+                          }}
+                        />
+                      </div>
+
+                      {/* 答案附件上传 */}
+                      <div>
+                        <FileUpload
+                          type="answer"
+                          onFilesChange={(files) => {
+                            console.log('答案附件文件变化:', files);
+                            // 这里可以保存文件信息到状态中
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
