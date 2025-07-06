@@ -175,15 +175,19 @@ const CreateHomework: React.FC = () => {
   // 处理表单提交
   const handleSubmit = async () => {
     if (!validateForm()) {
+      console.warn('⚠️ 表单验证失败');
       return;
     }
 
     // 提交前再次验证全局变量
     const validation = validateGlobalVariables();
     if (!validation.isValid) {
+      console.error('❌ 全局变量验证失败:', validation.missing);
       alert(`缺少必需的认证信息: ${validation.missing.join(', ')}\n请重新登录后再试`);
       return;
     }
+    
+    console.log('✅ 表单验证通过，开始提交作业');
     setIsSubmitting(true);
 
     try {
@@ -205,20 +209,52 @@ const CreateHomework: React.FC = () => {
           }))
       };
 
+      console.log('📋 准备提交的数据:', requestData);
+
       // 执行完整的作业创建流程
+      console.log('🚀 开始执行作业创建流程...');
       const result = await executeHomeworkCreationFlow(requestData);
 
-      // 成功提示
-      alert(`作业创建成功！\n作业ID: ${result.homeworkId}\n作业标题: ${result.homeworkDetail.title}`);
+      console.log('✅ 作业创建流程执行成功:', result);
+
+      // 成功提示 - 使用更友好的提示
+      const successMessage = `作业创建成功！\n\n` +
+        `📝 作业标题: ${result.homeworkDetail.title}\n` +
+        `🆔 作业ID: ${result.homeworkId}\n` +
+        `📚 科目: ${result.homeworkDetail.subject}\n` +
+        `👥 班级ID: ${result.homeworkDetail.deptId}\n` +
+        `📅 截止时间: ${new Date(result.homeworkDetail.ddlTime).toLocaleString()}`;
+      
+      alert(successMessage);
       
       // 跳转回作业列表
+      console.log('🔄 跳转回作业列表页面');
       navigate('/homework');
       
     } catch (error) {
       console.error('创建作业失败:', error);
-      alert(error instanceof Error ? error.message : '创建作业失败，请稍后重试');
+      
+      // 提供更详细的错误信息
+      let errorMessage = '创建作业失败';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // 根据错误类型提供不同的提示
+      if (errorMessage.includes('网络')) {
+        errorMessage += '\n\n请检查网络连接后重试';
+      } else if (errorMessage.includes('认证') || errorMessage.includes('401')) {
+        errorMessage += '\n\n请重新登录后重试';
+      } else if (errorMessage.includes('权限') || errorMessage.includes('403')) {
+        errorMessage += '\n\n您没有权限执行此操作';
+      } else {
+        errorMessage += '\n\n请稍后重试，如问题持续存在请联系管理员';
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
+      console.log('🏁 作业创建流程结束');
     }
   };
 

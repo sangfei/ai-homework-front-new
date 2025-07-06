@@ -136,8 +136,10 @@ export const getHomeworkList = async (params: HomeworkQueryParams = {}): Promise
 /**
  * 创建作业
  */
-export const createHomework = async (data: CreateHomeworkRequest): Promise<CreateHomeworkResponse> => {
+export const createHomework = async (data: CreateHomeworkRequest): Promise<number> => {
   try {
+    console.log('📤 发送创建作业请求:', data);
+    
     const response = await authenticatedFetch(
       'http://localhost:48084/admin-api/homework/homework-tasks/create',
       {
@@ -150,12 +152,22 @@ export const createHomework = async (data: CreateHomeworkRequest): Promise<Creat
       }
     );
 
+    console.log('📡 收到创建作业响应:', response.status, response.statusText);
+    
     const result: CreateHomeworkResponse = await response.json();
+    console.log('📋 创建作业响应数据:', result);
     
     if (result.code !== 0) {
+      console.error('❌ 创建作业失败 - 服务器返回错误:', result);
       throw new Error(result.msg || '创建作业失败');
     }
 
+    if (!result.data || typeof result.data !== 'number') {
+      console.error('❌ 创建作业失败 - 无效的作业ID:', result.data);
+      throw new Error('服务器返回的作业ID无效');
+    }
+
+    console.log('✅ 创建作业成功，作业ID:', result.data);
     return result.data;
   } catch (error) {
     console.error('创建作业失败:', error);

@@ -9,41 +9,36 @@ import { createHomework, getHomeworkDetail, type CreateHomeworkRequest } from '.
  * 3. 获取作业详情
  * 4. 保存到全局变量
  */
-export const executeHomeworkCreationFlow = async (requestData: CreateHomeworkRequest) => {
+export const executeHomeworkCreationFlow = async (requestData: CreateHomeworkRequest): Promise<{
+  success: boolean;
+  homeworkId: number;
+  homeworkDetail: any;
+  createResponse: any;
+}> => {
   try {
     console.log('🚀 开始作业创建流程...');
     console.log('📤 请求数据:', requestData);
 
     // 步骤1: 创建作业
     console.log('📝 步骤1: 创建作业...');
-    const createResponse = await createHomework(requestData);
-    
-    if (createResponse.code !== 0) {
-      throw new Error(createResponse.msg || '创建作业失败');
-    }
+    const homeworkId = await createHomework(requestData);
     
     console.log('✅ 步骤1完成 - 作业创建成功');
-    console.log('📋 创建响应:', createResponse);
+    console.log('🆔 获得作业ID:', homeworkId);
 
-    // 步骤2: 提取作业ID
-    console.log('🔍 步骤2: 提取作业ID...');
-    const homeworkId = createResponse.data;
-    
-    if (!homeworkId || typeof homeworkId !== 'number') {
-      throw new Error('作业ID无效或未返回');
-    }
-    
-    console.log('✅ 步骤2完成 - 作业ID提取成功:', homeworkId);
+    // 等待一小段时间确保数据库写入完成
+    console.log('⏳ 等待数据库写入完成...');
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // 步骤3: 获取作业详情
-    console.log('📖 步骤3: 获取作业详情...');
+    // 步骤2: 获取作业详情
+    console.log('📖 步骤2: 获取作业详情...');
     const homeworkDetail = await getHomeworkDetail(homeworkId);
     
-    console.log('✅ 步骤3完成 - 作业详情获取成功');
+    console.log('✅ 步骤2完成 - 作业详情获取成功');
     console.log('📄 作业详情:', homeworkDetail);
 
-    // 步骤4: 保存到全局变量
-    console.log('💾 步骤4: 保存作业详情到全局变量...');
+    // 步骤3: 保存到全局变量
+    console.log('💾 步骤3: 保存作业详情到全局变量...');
     
     // 保存到window对象的全局变量
     (window as any).homework_detail_for_update = homeworkDetail;
@@ -51,14 +46,14 @@ export const executeHomeworkCreationFlow = async (requestData: CreateHomeworkReq
     // 同时保存到localStorage作为备份
     localStorage.setItem('homework_detail_for_update', JSON.stringify(homeworkDetail));
     
-    console.log('✅ 步骤4完成 - 作业详情已保存到全局变量');
+    console.log('✅ 步骤3完成 - 作业详情已保存到全局变量');
     console.log('🎉 作业创建流程全部完成！');
 
     return {
       success: true,
       homeworkId,
       homeworkDetail,
-      createResponse
+      createResponse: { code: 0, data: homeworkId, msg: '创建成功' }
     };
 
   } catch (error) {
@@ -68,7 +63,12 @@ export const executeHomeworkCreationFlow = async (requestData: CreateHomeworkReq
     delete (window as any).homework_detail_for_update;
     localStorage.removeItem('homework_detail_for_update');
     
-    throw error;
+    // 重新抛出错误，但确保错误信息清晰
+    if (error instanceof Error) {
+      throw new Error(`作业创建失败: ${error.message}`);
+    } else {
+      throw new Error('作业创建失败: 未知错误');
+    }
   }
 };
 

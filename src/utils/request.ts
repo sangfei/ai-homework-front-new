@@ -83,16 +83,35 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
 };
 
 // 通用的API响应处理
-export const handleApiResponse = async <T>(response: Response): Promise<T> => {
+export const handleApiResponse = async <T>(response: Response, context?: string): Promise<T> => {
+  const logPrefix = context ? `[${context}]` : '';
+  
+  console.log(`${logPrefix} 📡 处理API响应:`, {
+    url: response.url,
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok
+  });
+  
   if (!response.ok) {
+    console.error(`${logPrefix} ❌ HTTP错误:`, response.status, response.statusText);
     throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
   }
   
-  const result = await response.json();
+  let result;
+  try {
+    result = await response.json();
+    console.log(`${logPrefix} 📋 响应数据:`, result);
+  } catch (error) {
+    console.error(`${logPrefix} ❌ 解析JSON失败:`, error);
+    throw new Error('服务器响应格式错误');
+  }
   
   if (result.code !== 0) {
+    console.error(`${logPrefix} ❌ 业务逻辑错误:`, result);
     throw new Error(result.msg || '请求失败');
   }
   
+  console.log(`${logPrefix} ✅ API响应处理成功`);
   return result.data;
 };
