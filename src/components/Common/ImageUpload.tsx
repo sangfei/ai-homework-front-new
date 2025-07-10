@@ -52,7 +52,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   };
 
-  const config = buttonConfig[type];
+  const config = buttonConfig[type] || buttonConfig.homework;
 
   // 文件大小格式化
   const formatFileSize = (bytes: number): string => {
@@ -264,10 +264,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             type="button"
             onClick={handleUploadClick}
             disabled={disabled}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${config.buttonClassName} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${config?.buttonClassName || 'bg-blue-600 text-white hover:bg-blue-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <config.icon className="w-4 h-4" />
-            <span>{config.text}</span>
+            <span>{config?.text || '上传图片'}</span>
           </button>
           
           <div
