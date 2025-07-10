@@ -34,6 +34,7 @@ const EditHomework: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   const [homework, setHomework] = useState<HomeworkData>({
     id: 0,
@@ -62,12 +63,12 @@ const EditHomework: React.FC = () => {
 
   // 加载作业数据
   useEffect(() => {
+    // 防止重复加载
+    if (dataLoaded || !homeworkId) {
+      return;
+    }
+
     const loadHomeworkData = async () => {
-      if (!homeworkId) {
-        showError('作业ID无效');
-        navigate('/homework');
-        return;
-      }
 
       try {
         setIsLoading(true);
@@ -110,6 +111,7 @@ const EditHomework: React.FC = () => {
           taskList: formattedTasks
         });
 
+        setDataLoaded(true);
         console.log('✅ 作业数据加载完成');
       } catch (error) {
         console.error('❌ 加载作业数据失败:', error);
@@ -120,8 +122,14 @@ const EditHomework: React.FC = () => {
       }
     };
 
+    if (!homeworkId) {
+      showError('作业ID无效');
+      navigate('/homework');
+      return;
+    }
+
     loadHomeworkData();
-  }, [homeworkId, navigate, showError]);
+  }, [homeworkId]); // 移除navigate和showError依赖，避免循环
 
   // 时间戳转换为datetime-local格式
   const timestampToDateTime = (timestamp: number): string => {
@@ -186,7 +194,7 @@ const EditHomework: React.FC = () => {
   };
 
   // 处理任务图片变化
-  const handleTaskImagesChange = (taskId: string, images: any[]) => {
+  const handleTaskImagesChange = useCallback((taskId: string, images: any[]) => {
     console.log('📸 任务图片变化:', { taskId, imagesCount: images.length });
     
     // 提取成功上传的图片URL
@@ -202,10 +210,10 @@ const EditHomework: React.FC = () => {
           : task
       )
     }));
-  };
+  }, []);
 
   // 删除现有图片
-  const handleDeleteExistingImage = (taskId: string, imageIndex: number) => {
+  const handleDeleteExistingImage = useCallback((taskId: string, imageIndex: number) => {
     setHomework(prev => ({
       ...prev,
       taskList: prev.taskList.map(task =>
@@ -217,7 +225,7 @@ const EditHomework: React.FC = () => {
           : task
       )
     }));
-  };
+  }, []);
 
   // 表单验证
   const validateForm = (): boolean => {

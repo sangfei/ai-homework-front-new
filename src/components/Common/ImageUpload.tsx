@@ -139,12 +139,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const handleFileSelect = useCallback(async (selectedFiles: FileList) => {
     const newImages: UploadedImage[] = [];
     
-          // 触发回调通知父组件
-          setImages(prev => {
-            onImagesChange?.(prev, taskId);
-            return prev;
-          });
-          
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
       const error = validateFile(file);
