@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X, Plus, Upload, Trash2, Info, Calendar, Clock, Save } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ClassSelect from '../Common/ClassSelect';
-import FileUpload from '../Common/FileUpload';
+import ImageUpload from '../Common/ImageUpload';
 import { useClassSelectOptions } from '../../hooks/useClasses';
 import { getHomeworkDetail, updateHomeworkDetail, type CreateHomeworkRequest } from '../../services/homework';
 import { validateGlobalVariables } from '../../utils/homeworkFlow';
@@ -13,6 +13,12 @@ interface Task {
   taskDescription: string;
   taskQuestion: string[];
   taskAnswer: string[];
+}
+
+interface NewImageData {
+  taskId: string;
+  type: 'homework' | 'answer';
+  images: any[];
 }
 
 interface FormData {
@@ -55,6 +61,9 @@ const EditHomework: React.FC = () => {
 
   // 任务列表
   const [tasks, setTasks] = useState<Task[]>([]);
+  
+  // 新上传的图片数据
+  const [newImageData, setNewImageData] = useState<Map<string, any[]>>(new Map());
 
   // 表单验证错误
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -170,6 +179,10 @@ const EditHomework: React.FC = () => {
 
   // 删除任务图片
   const removeTaskImage = (taskId: string, field: 'taskQuestion' | 'taskAnswer', index: number) => {
+    if (!window.confirm('确定要删除这张图片吗？删除后将无法恢复。')) {
+      return;
+    }
+    
     setTasks(tasks.map(task => {
       if (task.id === taskId) {
         const updatedArray = [...task[field]];
@@ -178,6 +191,16 @@ const EditHomework: React.FC = () => {
       }
       return task;
     }));
+  };
+
+  // 处理新图片上传
+  const handleNewImagesChange = (taskId: string, type: 'homework' | 'answer', images: any[]) => {
+    const key = `${taskId}-${type}`;
+    setNewImageData(prev => {
+      const updated = new Map(prev);
+      updated.set(key, images);
+      return updated;
+    });
   };
 
   // 表单验证
@@ -584,7 +607,41 @@ const EditHomework: React.FC = () => {
                     </div>
 
                     {/* 现有图片展示 */}
-                    {(task.taskQuestion.length > 0 || task.taskAnswer.length > 0) && (
+                    <div className="mt-6">
+                      <h4 className="text-sm font-medium text-gray-700 mb-4">图片管理</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* 作业题目图片管理 */}
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-600 mb-3">作业题目</h5>
+                          <ImageUpload
+                            type="homework"
+                            existingImages={task.taskQuestion}
+                            onExistingImageDelete={(index) => removeTaskImage(task.id, 'taskQuestion', index)}
+                            onImagesChange={(images) => handleNewImagesChange(task.id, 'homework', images)}
+                            maxFiles={5}
+                            maxSize={5}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+
+                        {/* 作业答案图片管理 */}
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-600 mb-3">作业答案</h5>
+                          <ImageUpload
+                            type="answer"
+                            existingImages={task.taskAnswer}
+                            onExistingImageDelete={(index) => removeTaskImage(task.id, 'taskAnswer', index)}
+                            onImagesChange={(images) => handleNewImagesChange(task.id, 'answer', images)}
+                            maxFiles={5}
+                            maxSize={5}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 保留原有的图片展示（作为备用） */}
+                    {false && (task.taskQuestion.length > 0 || task.taskAnswer.length > 0) && (
                       <div className="mt-6">
                         <h4 className="text-sm font-medium text-gray-700 mb-4">现有附件</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -644,7 +701,6 @@ const EditHomework: React.FC = () => {
                         </div>
                       </div>
                     )}
-                  </div>
                 </div>
               ))}
             </div>
@@ -659,8 +715,9 @@ const EditHomework: React.FC = () => {
                   <h3 className="text-sm font-medium text-blue-900 mb-1">编辑说明</h3>
                   <ul className="text-sm text-blue-700 space-y-1">
                     <li>• 修改作业信息后，系统将按照新的设定时间进行调整</li>
-                    <li>• 现有的附件图片可以通过点击右上角的删除按钮移除</li>
+                    <li>• 现有图片可以通过点击删除按钮移除，新上传的图片支持拖拽上传</li>
                     <li>• 请确保时间设置合理，截止时间应晚于发布时间</li>
+                    <li>• 支持 JPG、PNG、GIF、WebP 格式，单张图片不超过5MB</li>
                     <li>• 至少需要保留一个有效的任务</li>
                   </ul>
                 </div>

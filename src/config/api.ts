@@ -44,5 +44,8 @@ export const API_ENDPOINTS = {
   HOMEWORK_CREATE: '/admin-api/homework/homework-tasks/create',
   HOMEWORK_GET: '/admin-api/homework/homework-tasks/get',
   HOMEWORK_UPDATE: '/admin-api/homework/homework-tasks/update',
-  HOMEWORK_UPLOAD_ATTACHMENT: '/admin-api/homework/homework-tasks/upload-independent-attachment'
+  HOMEWORK_UPLOAD_ATTACHMENT: '/admin-api/homework/homework-tasks/upload-independent-attachment',
+  
+  // 图片上传相关
+  IMAGE_UPLOAD: '/admin-api/homework/homework-tasks/upload-image'
 } as const;
