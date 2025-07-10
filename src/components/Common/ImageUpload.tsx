@@ -42,12 +42,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const buttonConfig = {
     homework: {
       text: '上传作业附件',
-      className: 'bg-blue-600 text-white hover:bg-blue-700',
+      buttonClassName: 'bg-blue-600 text-white hover:bg-blue-700',
       icon: Upload
     },
     answer: {
       text: '上传答案附件',
-      className: 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300',
+      buttonClassName: 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300',
       icon: Upload
     }
   };
@@ -264,7 +264,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             type="button"
             onClick={handleUploadClick}
             disabled={disabled}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${config.className} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${config.buttonClassName} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <config.icon className="w-4 h-4" />
             <span>{config.text}</span>
