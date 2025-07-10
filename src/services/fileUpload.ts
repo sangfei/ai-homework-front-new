@@ -1,5 +1,6 @@
 import { authenticatedFetch } from '../utils/request';
 import { getTenantId } from './auth';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 // 文件上传请求参数
 interface FileUploadRequest {
@@ -50,7 +51,7 @@ export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promi
     formData.append('file', params.file);
 
     // 发送请求 - 注意：文件上传不需要设置Content-Type，让浏览器自动设置
-    const response = await fetch('http://localhost:48080/admin-api/homework/homework-tasks/upload-independent-attachment', {
+    const response = await fetch(buildApiUrl(API_ENDPOINTS.HOMEWORK_UPLOAD_ATTACHMENT), {
       method: 'POST',
       headers: {
         'Accept': '*/*',

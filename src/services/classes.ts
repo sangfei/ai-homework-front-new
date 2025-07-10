@@ -1,4 +1,5 @@
 import { authenticatedFetch, handleApiResponse } from '../utils/request';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 // 班级接口定义
 export interface ClassItem {
@@ -38,7 +39,7 @@ export const getClassList = async (params?: {
     });
 
     const response = await authenticatedFetch(
-      `http://localhost:48080/admin-api/system/dept/list?${queryParams}`,
+      `${buildApiUrl(API_ENDPOINTS.DEPT_LIST)}?${queryParams}`,
       {
         method: 'GET',
       }

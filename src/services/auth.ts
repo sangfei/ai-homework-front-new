@@ -1,6 +1,7 @@
 import { tokenRefreshManager } from './tokenRefresh';
 import type { UserProfile } from './user';
 import { storage } from '../utils/storage';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 // 认证服务
 interface TenantResponse {
   code: number;
@@ -159,7 +160,7 @@ export const initializeAuth = (): void => {
 const getTenantIdByMobile = async (mobile: string): Promise<string> => {
   try {
     const response = await fetch(
-      `http://localhost:48080/admin-api/system/tenant/get-id-by-mobile?mobile=${encodeURIComponent(mobile)}`,
+      `${buildApiUrl(API_ENDPOINTS.GET_TENANT_BY_MOBILE)}?mobile=${encodeURIComponent(mobile)}`,
       {
         method: 'GET',
         headers: {
@@ -209,7 +210,7 @@ const performLogin = async (
     };
 
     const response = await fetch(
-      'http://localhost:48080/admin-api/system/auth/login',
+      buildApiUrl(API_ENDPOINTS.LOGIN),
       {
         method: 'POST',
         headers: {

@@ -1,5 +1,6 @@
 import { authenticatedFetch, handleApiResponse } from '../utils/request';
 import { setUserProfile } from './auth';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 // 用户信息接口定义
 export interface UserProfile {
@@ -40,7 +41,7 @@ interface UserProfileResponse {
 export const getUserProfile = async (): Promise<UserProfile> => {
   try {
     const response = await authenticatedFetch(
-      'http://localhost:48080/admin-api/system/user/profile/get',
+      buildApiUrl(API_ENDPOINTS.USER_PROFILE),
       {
         method: 'GET',
       }

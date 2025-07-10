@@ -1,4 +1,5 @@
 import { authenticatedFetch, handleApiResponse } from '../utils/request';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 // 作业接口定义
 interface TaskItem {
@@ -108,7 +109,7 @@ export const getHomeworkList = async (params: HomeworkQueryParams = {}): Promise
     if (params.status) queryParams.append('status', params.status);
 
     const response = await authenticatedFetch(
-      `http://localhost:48080/admin-api/homework/homework-tasks/page?${queryParams}`,
+      `${buildApiUrl(API_ENDPOINTS.HOMEWORK_PAGE)}?${queryParams}`,
       {
         method: 'GET',
         headers: {
@@ -141,7 +142,7 @@ export const createHomework = async (data: CreateHomeworkRequest): Promise<numbe
     console.log('📤 发送创建作业请求:', data);
     
     const response = await authenticatedFetch(
-      'http://localhost:48080/admin-api/homework/homework-tasks/create',
+      buildApiUrl(API_ENDPOINTS.HOMEWORK_CREATE),
       {
         method: 'POST',
         headers: {
@@ -181,7 +182,7 @@ export const createHomework = async (data: CreateHomeworkRequest): Promise<numbe
 export const getHomeworkDetail = async (homeworkId: number): Promise<HomeworkDetailResponse['data']> => {
   try {
     const response = await authenticatedFetch(
-      `http://localhost:48080/admin-api/homework/homework-tasks/get?id=${homeworkId}`,
+      `${buildApiUrl(API_ENDPOINTS.HOMEWORK_GET)}?id=${homeworkId}`,
       {
         method: 'GET',
         headers: {
@@ -210,7 +211,7 @@ export const getHomeworkDetail = async (homeworkId: number): Promise<HomeworkDet
 const updateHomework = async (id: string, data: Partial<HomeworkItem>): Promise<any> => {
   try {
     const response = await authenticatedFetch(
-      `http://localhost:48080/admin-api/homework/homework-tasks/${id}`,
+      `${buildApiUrl(`/admin-api/homework/homework-tasks/${id}`)}`,
       {
         method: 'PUT',
         headers: {
@@ -242,7 +243,7 @@ export const updateHomeworkDetail = async (homeworkDetail: any): Promise<any> =>
     console.log('📤 发送作业更新请求:', homeworkDetail);
     
     const response = await authenticatedFetch(
-      'http://localhost:48084/admin-api/homework/homework-tasks/update',
+      buildApiUrl(API_ENDPOINTS.HOMEWORK_UPDATE),
       {
         method: 'PUT',
         headers: {
@@ -276,7 +277,7 @@ export const updateHomeworkDetail = async (homeworkDetail: any): Promise<any> =>
 export const deleteHomework = async (id: string): Promise<any> => {
   try {
     const response = await authenticatedFetch(
-      `http://localhost:48080/admin-api/homework/homework-tasks/${id}`,
+      `${buildApiUrl(`/admin-api/homework/homework-tasks/${id}`)}`,
       {
         method: 'DELETE',
         headers: {

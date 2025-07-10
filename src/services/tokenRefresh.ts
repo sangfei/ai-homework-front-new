@@ -1,5 +1,6 @@
 import { storage } from '../utils/storage';
 import { authenticatedFetch } from '../utils/request';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 // Token刷新响应接口
 interface RefreshTokenResponse {
@@ -90,7 +91,7 @@ export class TokenRefreshManager {
       console.log('🔄 开始刷新Token...');
       
       const response = await fetch(
-        'http://localhost:48080/admin-api/system/auth/refresh-token',
+        buildApiUrl(API_ENDPOINTS.REFRESH_TOKEN),
         {
           method: 'POST',
           headers: {

@@ -305,7 +305,7 @@ export const executeHomeworkSubmissionFlow = async (
       console.log('✅ 步骤6完成 - 作业更新成功');
       
       // 显示成功提示框
-      alert('作业更新成功');
+      alert('作业创建成功！');
       
       // 用户点击确定后跳转到作业管理页面
       window.location.href = '/homework';
