@@ -19,6 +19,7 @@ import ClassManagement from './components/Classes/ClassManagement';
 import StudentManagement from './components/Students/StudentManagement';
 import Analytics from './components/Analytics/Analytics';
 import StudentReports from './components/Reports/StudentReports';
+import { ToastContainer, useToast } from './components/Common/Toast';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -26,6 +27,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
+  const { messages, removeToast } = useToast();
 
   // 检查是否已有有效的登录状态
   useEffect(() => {
@@ -241,6 +243,9 @@ function App() {
           </Routes>
         </div>
       </Router>
+      
+      {/* Toast 通知容器 */}
+      <ToastContainer messages={messages} onClose={removeToast} />
     </ErrorBoundary>
   );
 }

@@ -1,172 +1,355 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, X, Plus, Trash2, Calendar, Clock, Users, BookOpen, Info, Upload, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, X, Plus, Trash2, Calendar, Clock, Info, Upload } from 'lucide-react';
 import ClassSelect from '../Common/ClassSelect';
-import FileUpload from '../Common/FileUpload';
 import ImageUpload from '../Common/ImageUpload';
+import { getHomeworkDetail, updateHomeworkDetail } from '../../services/homework';
+import { useToast } from '../Common/Toast';
 
 interface Task {
   id: string;
-  title: string;
-  description: string;
-  points: number;
+  taskTitle: string;
+  taskDescription: string;
+  taskQuestion: string[];
+  taskAnswer: string[];
+  images?: string[];
 }
 
 interface HomeworkData {
-  id: string;
+  id: number;
   title: string;
-  description: string;
-  classId: string;
-  publishTime: string;
-  dueTime: string;
-  tasks: Task[];
-  attachments: File[];
-  images: string[];
+  deptId: number;
+  subject: string;
+  assignedDate: number;
+  publishTime: number;
+  ddlTime: number;
+  taskList: Task[];
 }
 
 const EditHomework: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { homeworkId } = useParams<{ homeworkId: string }>();
+  const { success, error: showError } = useToast();
+  
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  
   const [homework, setHomework] = useState<HomeworkData>({
-    id: '',
+    id: 0,
     title: '',
-    description: '',
-    classId: '',
-    publishTime: '',
-    dueTime: '',
-    tasks: [{ id: '1', title: '', description: '', points: 10 }],
-    attachments: [],
-    images: []
+    deptId: 0,
+    subject: '',
+    assignedDate: Date.now(),
+    publishTime: Date.now(),
+    ddlTime: Date.now() + 24 * 60 * 60 * 1000,
+    taskList: []
   });
 
-  useEffect(() => {
-    // Load homework data based on id
-    if (id) {
-      // Mock data loading - replace with actual API call
-      setHomework({
-        id: id,
-        title: '数学作业 - 第三章练习',
-        description: '完成教材第三章的所有练习题',
-        classId: 'class1',
-        publishTime: '2024-01-15T09:00',
-        dueTime: '2024-01-20T23:59',
-        tasks: [
-          { id: '1', title: '基础计算题', description: '完成1-20题', points: 50 },
-          { id: '2', title: '应用题', description: '完成21-30题', points: 50 }
-        ],
-        attachments: [],
-        images: ['https://example.com/image1.jpg']
-      });
-    }
-  }, [id]);
+  // 科目选项
+  const subjectOptions = [
+    { value: '', label: '请选择科目' },
+    { value: '语文', label: '语文' },
+    { value: '数学', label: '数学' },
+    { value: '英语', label: '英语' },
+    { value: '物理', label: '物理' },
+    { value: '化学', label: '化学' },
+    { value: '生物', label: '生物' },
+    { value: '历史', label: '历史' },
+    { value: '地理', label: '地理' },
+    { value: '政治', label: '政治' }
+  ];
 
-  const handleInputChange = (field: keyof HomeworkData, value: any) => {
-    setHomework(prev => ({ ...prev, [field]: value }));
+  // 加载作业数据
+  useEffect(() => {
+    const loadHomeworkData = async () => {
+      if (!homeworkId) {
+        showError('作业ID无效');
+        navigate('/homework');
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        console.log('🔍 加载作业数据，ID:', homeworkId);
+        
+        const homeworkDetail = await getHomeworkDetail(Number(homeworkId));
+        console.log('📋 获取到作业详情:', homeworkDetail);
+        
+        // 确保taskList存在且格式正确
+        const taskList = homeworkDetail.taskList || [];
+        const formattedTasks = taskList.map((task: any) => ({
+          id: task.id?.toString() || Date.now().toString(),
+          taskTitle: task.taskTitle || '',
+          taskDescription: task.taskDescription || '',
+          taskQuestion: Array.isArray(task.taskQuestion) ? task.taskQuestion : [],
+          taskAnswer: Array.isArray(task.taskAnswer) ? task.taskAnswer : [],
+          images: []
+        }));
+
+        // 如果没有任务，创建一个默认任务
+        if (formattedTasks.length === 0) {
+          formattedTasks.push({
+            id: '1',
+            taskTitle: '',
+            taskDescription: '',
+            taskQuestion: [],
+            taskAnswer: [],
+            images: []
+          });
+        }
+
+        setHomework({
+          id: homeworkDetail.id,
+          title: homeworkDetail.title || '',
+          deptId: homeworkDetail.deptId || 0,
+          subject: homeworkDetail.subject || '',
+          assignedDate: homeworkDetail.assignedDate || Date.now(),
+          publishTime: homeworkDetail.publishTime || Date.now(),
+          ddlTime: homeworkDetail.ddlTime || Date.now() + 24 * 60 * 60 * 1000,
+          taskList: formattedTasks
+        });
+
+        console.log('✅ 作业数据加载完成');
+      } catch (error) {
+        console.error('❌ 加载作业数据失败:', error);
+        showError('加载作业数据失败');
+        navigate('/homework');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadHomeworkData();
+  }, [homeworkId, navigate, showError]);
+
+  // 时间戳转换为datetime-local格式
+  const timestampToDateTime = (timestamp: number): string => {
+    return new Date(timestamp).toISOString().slice(0, 16);
   };
 
+  // datetime-local格式转换为时间戳
+  const dateTimeToTimestamp = (dateTimeString: string): number => {
+    return new Date(dateTimeString).getTime();
+  };
+
+  // 处理基本信息变化
+  const handleBasicInfoChange = (field: keyof HomeworkData, value: any) => {
+    setHomework(prev => ({ ...prev, [field]: value }));
+    // 清除相关错误
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // 处理任务变化
   const handleTaskChange = (taskId: string, field: keyof Task, value: any) => {
     setHomework(prev => ({
       ...prev,
-      tasks: prev.tasks.map(task =>
+      taskList: prev.taskList.map(task =>
         task.id === taskId ? { ...task, [field]: value } : task
       )
     }));
+    
+    // 清除相关错误
+    const errorKey = `task_${taskId}_${field}`;
+    if (errors[errorKey]) {
+      setErrors(prev => ({ ...prev, [errorKey]: '' }));
+    }
   };
 
+  // 添加任务
   const addTask = () => {
     const newTask: Task = {
       id: Date.now().toString(),
-      title: '',
-      description: '',
-      points: 10
+      taskTitle: '',
+      taskDescription: '',
+      taskQuestion: [],
+      taskAnswer: [],
+      images: []
     };
+    
     setHomework(prev => ({
       ...prev,
-      tasks: [...prev.tasks, newTask]
+      taskList: [...prev.taskList, newTask]
     }));
   };
 
+  // 删除任务
   const removeTask = (taskId: string) => {
-    if (homework.tasks.length > 1) {
+    if (homework.taskList.length > 1) {
       setHomework(prev => ({
         ...prev,
-        tasks: prev.tasks.filter(task => task.id !== taskId)
+        taskList: prev.taskList.filter(task => task.id !== taskId)
       }));
     }
   };
 
-  const handleFileUpload = (files: File[]) => {
+  // 处理任务图片变化
+  const handleTaskImagesChange = (taskId: string, images: any[]) => {
+    console.log('📸 任务图片变化:', { taskId, imagesCount: images.length });
+    
+    // 提取成功上传的图片URL
+    const imageUrls = images
+      .filter(img => img.status === 'success' && img.url)
+      .map(img => img.url);
+    
     setHomework(prev => ({
       ...prev,
-      attachments: [...prev.attachments, ...files]
+      taskList: prev.taskList.map(task =>
+        task.id === taskId 
+          ? { ...task, images: imageUrls }
+          : task
+      )
     }));
   };
 
-  const handleImageUpload = (imageUrl: string) => {
+  // 删除现有图片
+  const handleDeleteExistingImage = (taskId: string, imageIndex: number) => {
     setHomework(prev => ({
       ...prev,
-      images: [...prev.images, imageUrl]
+      taskList: prev.taskList.map(task =>
+        task.id === taskId 
+          ? { 
+              ...task, 
+              images: task.images?.filter((_, index) => index !== imageIndex) || []
+            }
+          : task
+      )
     }));
   };
 
-  const removeImage = (index: number) => {
-    setHomework(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
+  // 表单验证
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    // 验证基本信息
+    if (!homework.title.trim()) {
+      newErrors.title = '请输入作业标题';
+    }
+    
+    if (!homework.deptId) {
+      newErrors.deptId = '请选择班级';
+    }
+    
+    if (!homework.subject) {
+      newErrors.subject = '请选择科目';
+    }
+
+    // 验证时间逻辑
+    if (homework.ddlTime <= homework.publishTime) {
+      newErrors.ddlTime = '截止时间必须晚于发布时间';
+    }
+
+    // 验证任务
+    const hasValidTask = homework.taskList.some(task => task.taskTitle.trim());
+    if (!hasValidTask) {
+      newErrors.tasks = '至少需要一个有效的任务';
+    }
+
+    // 验证每个任务的必填字段
+    homework.taskList.forEach((task) => {
+      if (task.taskTitle.trim()) {
+        if (!task.taskDescription.trim()) {
+          newErrors[`task_${task.id}_description`] = '任务描述为必填项';
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
+  // 提交表单
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      showError('请检查表单填写是否完整');
+      return;
+    }
+
     setIsSubmitting(true);
+
     try {
-      // Validate form
-      if (!homework.title.trim() || !homework.classId || !homework.publishTime || !homework.dueTime) {
-        alert('请填写所有必填字段');
-        return;
-      }
-
-      if (new Date(homework.publishTime) >= new Date(homework.dueTime)) {
-        alert('截止时间必须晚于发布时间');
-        return;
-      }
-
-      // Mock API call - replace with actual update
-      console.log('Updating homework:', homework);
+      console.log('📤 开始提交作业更新...');
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 准备提交数据
+      const updateData = {
+        ...homework,
+        taskList: homework.taskList
+          .filter(task => task.taskTitle.trim()) // 过滤掉空任务
+          .map(task => ({
+            id: task.id,
+            taskTitle: task.taskTitle.trim(),
+            taskDescription: task.taskDescription.trim(),
+            taskQuestion: task.taskQuestion || [],
+            taskAnswer: task.taskAnswer || []
+          }))
+      };
+
+      console.log('📋 提交数据:', updateData);
       
+      await updateHomeworkDetail(updateData);
+      
+      success('作业更新成功！');
       navigate('/homework');
+      
     } catch (error) {
-      console.error('Failed to update homework:', error);
-      alert('保存失败，请重试');
+      console.error('❌ 更新作业失败:', error);
+      showError('更新作业失败，请稍后重试');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // 取消编辑
   const handleCancel = () => {
     navigate('/homework');
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-          {/* 页面标题 */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">编辑作业</h1>
-            <p className="text-gray-600">修改作业信息和要求</p>
-          </div>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">加载作业数据中...</p>
+        </div>
+      </div>
+    );
+  }
 
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* 顶部导航 */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={handleCancel}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>返回</span>
+            </button>
+            <h1 className="text-xl font-bold text-gray-900">编辑作业</h1>
+          </div>
+          <button
+            onClick={handleCancel}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
+
+      {/* 主要内容 */}
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
           {/* 基本信息 */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
-              基本信息
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">基本信息</h2>
+            
+            <div className="space-y-6">
+              {/* 作业标题 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   作业标题 <span className="text-red-500">*</span>
@@ -174,198 +357,230 @@ const EditHomework: React.FC = () => {
                 <input
                   type="text"
                   value={homework.title}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleBasicInfoChange('title', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.title ? 'border-red-300' : 'border-gray-300'
+                  }`}
                   placeholder="请输入作业标题"
                 />
+                {errors.title && (
+                  <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  选择班级 <span className="text-red-500">*</span>
-                </label>
-                <ClassSelect
-                  value={homework.classId}
-                  onChange={(classId) => handleInputChange('classId', classId)}
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 班级选择 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    班级 <span className="text-red-500">*</span>
+                  </label>
+                  <ClassSelect
+                    value={homework.deptId}
+                    onChange={(value) => handleBasicInfoChange('deptId', Number(value))}
+                    placeholder="请选择班级"
+                    allowEmpty={false}
+                    className={`${
+                      errors.deptId ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors.deptId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.deptId}</p>
+                  )}
+                </div>
+
+                {/* 科目选择 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    科目 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={homework.subject}
+                    onChange={(e) => handleBasicInfoChange('subject', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.subject ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                  >
+                    {subjectOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.subject && (
+                    <p className="mt-1 text-sm text-red-600">{errors.subject}</p>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                作业描述
-              </label>
-              <textarea
-                value={homework.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="请输入作业的详细描述和要求"
-              />
             </div>
           </div>
 
           {/* 时间设置 */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-green-600" />
-              时间设置
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">时间设置</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* 作业日期 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  作业日期 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={timestampToDateTime(homework.assignedDate)}
+                  onChange={(e) => handleBasicInfoChange('assignedDate', dateTimeToTimestamp(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="mt-1 text-xs text-gray-500">默认为当前时间</p>
+              </div>
+
+              {/* 发布时间 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Clock className="w-4 h-4 inline mr-1" />
                   发布时间 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="datetime-local"
-                  value={homework.publishTime}
-                  onChange={(e) => handleInputChange('publishTime', e.target.value)}
+                  value={timestampToDateTime(homework.publishTime)}
+                  onChange={(e) => handleBasicInfoChange('publishTime', dateTimeToTimestamp(e.target.value))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                <p className="mt-1 text-xs text-gray-500">默认为当前时间</p>
               </div>
+
+              {/* 截止时间 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Clock className="w-4 h-4 inline mr-1" />
                   截止时间 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="datetime-local"
-                  value={homework.dueTime}
-                  onChange={(e) => handleInputChange('dueTime', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={timestampToDateTime(homework.ddlTime)}
+                  onChange={(e) => handleBasicInfoChange('ddlTime', dateTimeToTimestamp(e.target.value))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.ddlTime ? 'border-red-300' : 'border-gray-300'
+                  }`}
                 />
+                {errors.ddlTime && (
+                  <p className="mt-1 text-sm text-red-600">{errors.ddlTime}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">默认为明天上午9:00</p>
               </div>
             </div>
           </div>
 
-          {/* 任务列表 */}
+          {/* 任务管理 */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                <Users className="w-5 h-5 mr-2 text-purple-600" />
-                任务列表
-              </h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900">任务管理</h2>
               <button
                 onClick={addTask}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
               >
                 <Plus className="w-4 h-4" />
                 <span>添加任务</span>
               </button>
             </div>
-            <div className="space-y-4">
-              {homework.tasks.map((task, index) => (
-                <div key={task.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-gray-900">任务 {index + 1}</h3>
-                    {homework.tasks.length > 1 && (
+
+            {errors.tasks && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{errors.tasks}</p>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              {homework.taskList.map((task, index) => (
+                <div key={task.id} className="border border-gray-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-md font-medium text-gray-900">
+                      任务 {index + 1}
+                    </h3>
+                    {homework.taskList.length > 1 && (
                       <button
                         onClick={() => removeTask(task.id)}
-                        className="text-red-600 hover:text-red-700 transition-colors"
+                        className="text-red-600 hover:text-red-800"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        任务标题
+
+                  <div className="space-y-4">
+                    {/* 任务标题 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        任务标题 <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
-                        value={task.title}
-                        onChange={(e) => handleTaskChange(task.id, 'title', e.target.value)}
+                        value={task.taskTitle}
+                        onChange={(e) => handleTaskChange(task.id, 'taskTitle', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="请输入任务标题"
+                        placeholder={`任务${index + 1}，例如：完成课本78-79课后习题`}
                       />
                     </div>
+
+                    {/* 任务描述 */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        分值
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        任务描述 <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="number"
-                        value={task.points}
-                        onChange={(e) => handleTaskChange(task.id, 'points', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        min="0"
-                        max="100"
+                      <textarea
+                        value={task.taskDescription}
+                        onChange={(e) => handleTaskChange(task.id, 'taskDescription', e.target.value)}
+                        rows={3}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          errors[`task_${task.id}_description`] ? 'border-red-300' : 'border-gray-300'
+                        }`}
+                        placeholder="请输入任务的详细描述..."
                       />
+                      {errors[`task_${task.id}_description`] && (
+                        <p className="mt-1 text-sm text-red-600">{errors[`task_${task.id}_description`]}</p>
+                      )}
                     </div>
-                  </div>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      任务描述
-                    </label>
-                    <textarea
-                      value={task.description}
-                      onChange={(e) => handleTaskChange(task.id, 'description', e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="请输入任务的详细描述"
-                    />
+
+                    {/* 图片上传区域 */}
+                    <div className="mt-6">
+                      <h4 className="text-sm font-medium text-gray-700 mb-4">图片管理</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* 作业图片上传 */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            作业图片
+                          </label>
+                          <ImageUpload
+                            type="homework"
+                            existingImages={task.images || []}
+                            onImagesChange={(images) => handleTaskImagesChange(task.id, images)}
+                            onExistingImageDelete={(index) => handleDeleteExistingImage(task.id, index)}
+                            maxFiles={5}
+                            maxSize={5}
+                          />
+                        </div>
+
+                        {/* 答案图片上传 */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            答案图片
+                          </label>
+                          <ImageUpload
+                            type="answer"
+                            existingImages={[]}
+                            onImagesChange={(images) => {
+                              console.log('答案图片变化:', images);
+                              // 这里可以处理答案图片的逻辑
+                            }}
+                            maxFiles={5}
+                            maxSize={5}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* 附件上传 */}
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Upload className="w-5 h-5 mr-2 text-orange-600" />
-              附件管理
-            </h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  文件附件
-                </label>
-                <FileUpload onUpload={handleFileUpload} />
-                {homework.attachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {homework.attachments.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
-                        <span className="text-sm text-gray-700">{file.name}</span>
-                        <button
-                          onClick={() => {
-                            setHomework(prev => ({
-                              ...prev,
-                              attachments: prev.attachments.filter((_, i) => i !== index)
-                            }));
-                          }}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  图片附件
-                </label>
-                <ImageUpload onUpload={handleImageUpload} />
-                {homework.images.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {homework.images.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={image}
-                          alt={`附件图片 ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                        />
-                        <button
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
@@ -378,9 +593,9 @@ const EditHomework: React.FC = () => {
                   <h3 className="text-sm font-medium text-blue-900 mb-1">编辑说明</h3>
                   <ul className="text-sm text-blue-700 space-y-1">
                     <li>• 修改作业信息后，系统将按照新的设定时间进行调整</li>
-                    <li>• 现有图片可以通过点击删除按钮移除，新上传的图片支持拖拽上传</li>
-                    <li>• 请确保时间设置合理，截止时间应晚于发布时间</li>
+                    <li>• 每个任务都可以独立上传和管理图片，互不影响</li>
                     <li>• 支持 JPG、PNG、GIF、WebP 格式，单张图片不超过5MB</li>
+                    <li>• 请确保时间设置合理，截止时间应晚于发布时间</li>
                     <li>• 至少需要保留一个有效的任务</li>
                   </ul>
                 </div>
@@ -405,7 +620,6 @@ const EditHomework: React.FC = () => {
               {isSubmitting && (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               )}
-              <Save className="w-4 h-4" />
               <span>{isSubmitting ? '保存中...' : '保存修改'}</span>
             </button>
           </div>

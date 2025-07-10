@@ -16,12 +16,13 @@ interface UploadedImage {
 interface ImageUploadProps {
   type: 'homework' | 'answer';
   existingImages?: string[];
-  onImagesChange?: (images: UploadedImage[]) => void;
+  onImagesChange?: (images: UploadedImage[], taskId?: string) => void;
   onExistingImageDelete?: (index: number) => void;
   maxFiles?: number;
   maxSize?: number; // MB
   className?: string;
   disabled?: boolean;
+  taskId?: string;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -32,7 +33,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   maxFiles = 5,
   maxSize = 5,
   className = '',
-  disabled = false
+  disabled = false,
+  taskId
 }) => {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -137,6 +139,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const handleFileSelect = useCallback(async (selectedFiles: FileList) => {
     const newImages: UploadedImage[] = [];
     
+          // 触发回调通知父组件
+          setImages(prev => {
+            onImagesChange?.(prev, taskId);
+            return prev;
+          });
+          
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
       const error = validateFile(file);
@@ -162,7 +170,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     if (newImages.length > 0) {
       setImages(prev => {
         const updated = [...prev, ...newImages];
-        onImagesChange?.(updated);
+        onImagesChange?.(updated, taskId);
         return updated;
       });
 
@@ -218,7 +226,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         }
         
         const updated = prev.filter(img => img.id !== imageId);
-        onImagesChange?.(updated);
+        onImagesChange?.(updated, taskId);
         return updated;
       });
     }
