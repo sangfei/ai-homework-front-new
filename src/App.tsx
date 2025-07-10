@@ -163,6 +163,7 @@ function App() {
             <Route path="/homework/grading/:homeworkId" element={<HomeworkGrading />} />
             <Route path="/homework/grading/:homeworkId/student/:studentId" element={<HomeworkGradingDetail />} />
             <Route path="/homework/grading/:homeworkId/analysis" element={<OverallAnalysis />} />
+            <Route path="/homework/edit/:homeworkId" element={<EditHomework />} />
             <Route path="/student-report/:studentId" element={<StudentPersonalReport />} />
             <Route path="/*" element={
               <div className="flex">
@@ -218,6 +219,7 @@ function App() {
                           </div>
                         } />
                         <Route path="/homework" element={<HomeworkList />} />
+                        <Route path="/homework/edit/:homeworkId" element={<EditHomework />} />
                         <Route path="/classes" element={<ClassManagement />} />
                         <Route path="/students" element={<StudentManagement />} />
                         <Route path="/analytics" element={<Analytics />} />

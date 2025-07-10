@@ -116,6 +116,7 @@ const HomeworkList: React.FC = () => {
 
   // 处理编辑操作
   const handleEdit = (homeworkId: string) => {
+    console.log('🔧 编辑作业，ID:', homeworkId);
     navigate(`/homework/edit/${homeworkId}`);
   };
 

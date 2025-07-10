@@ -68,6 +68,7 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
   };
 
   const handleEdit = () => {
+    console.log('🔧 点击编辑按钮，作业ID:', homework.id);
     if (onEdit) {
       onEdit(homework.id);
     } else {
