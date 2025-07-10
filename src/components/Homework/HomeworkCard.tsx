@@ -67,6 +67,14 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
     }
   };
 
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(homework.id);
+    } else {
+      navigate(`/homework/edit/${homework.id}`);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
       {/* 卡片头部 */}
@@ -190,7 +198,7 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
         
         {onEdit && (
           <button
-            onClick={() => onEdit(homework.id)}
+            onClick={handleEdit}
             className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800"
           >
             <Edit className="w-4 h-4" />
