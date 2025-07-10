@@ -10,6 +10,7 @@ import Sidebar from './components/Layout/Sidebar';
 import DashboardStats from './components/Dashboard/DashboardStats';
 import HomeworkList from './components/Homework/HomeworkList';
 import CreateHomework from './components/Homework/CreateHomework';
+import EditHomework from './components/Homework/EditHomework';
 import HomeworkGrading from './components/Homework/HomeworkGrading';
 import HomeworkGradingDetail from './components/Homework/HomeworkGradingDetail';
 import OverallAnalysis from './components/Homework/OverallAnalysis';
@@ -147,6 +148,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="*" element={<LoginPage onLogin={handleLogin} />} />
+          <Route path="/homework/edit/:homeworkId" element={<EditHomework />} />
         </Routes>
       </Router>
     );
