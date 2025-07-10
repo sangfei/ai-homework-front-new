@@ -75,7 +75,7 @@ export const executeHomeworkCreationFlow = async (requestData: CreateHomeworkReq
 /**
  * 获取保存的作业详情
  */
-export const getSavedHomeworkDetail = () => {
+const getSavedHomeworkDetail = () => {
   // 优先从window对象获取
   const windowData = (window as any).homework_detail_for_update;
   if (windowData) {
@@ -98,7 +98,7 @@ export const getSavedHomeworkDetail = () => {
 /**
  * 清理保存的作业详情
  */
-export const clearSavedHomeworkDetail = () => {
+const clearSavedHomeworkDetail = () => {
   delete (window as any).homework_detail_for_update;
   localStorage.removeItem('homework_detail_for_update');
   console.log('🧹 已清理保存的作业详情');
@@ -136,7 +136,7 @@ export const validateGlobalVariables = (): { isValid: boolean; missing: string[]
 /**
  * 调试信息输出
  */
-export const debugHomeworkFlow = () => {
+const debugHomeworkFlow = () => {
   console.group('🔧 作业流程调试信息');
   
   // 检查全局变量

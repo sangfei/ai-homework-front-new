@@ -33,7 +33,7 @@ export const useClassList = () => {
 };
 
 // 班级选项Hook
-export const useClassOptions = () => {
+const useClassOptions = () => {
   const [options, setOptions] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

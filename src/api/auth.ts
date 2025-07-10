@@ -12,11 +12,11 @@ export const logout = (): Promise<void> => {
 }
 
 // 获取用户信息
-export const getUserInfo = (): Promise<any> => {
+const getUserInfo = (): Promise<any> => {
   return request.get('/auth/user')
 }
 
 // 刷新token
-export const refreshToken = (): Promise<any> => {
+const refreshToken = (): Promise<any> => {
   return request.post('/auth/refresh')
 }

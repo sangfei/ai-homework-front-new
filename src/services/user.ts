@@ -28,7 +28,7 @@ export interface UserProfile {
   posts: any;
 }
 
-export interface UserProfileResponse {
+interface UserProfileResponse {
   code: number;
   data: UserProfile;
   msg: string;

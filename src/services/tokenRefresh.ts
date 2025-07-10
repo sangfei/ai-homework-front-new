@@ -2,7 +2,7 @@ import { storage } from '../utils/storage';
 import { authenticatedFetch } from '../utils/request';
 
 // Token刷新响应接口
-export interface RefreshTokenResponse {
+interface RefreshTokenResponse {
   code: number;
   data: {
     accessToken: string;

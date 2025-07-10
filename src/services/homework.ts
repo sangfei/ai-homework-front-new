@@ -1,7 +1,7 @@
 import { authenticatedFetch, handleApiResponse } from '../utils/request';
 
 // 作业接口定义
-export interface TaskItem {
+interface TaskItem {
   taskTitle: string;
   taskDescription: string;
   taskQuestion: string;
@@ -21,7 +21,7 @@ export interface HomeworkItem {
   status?: string;
 }
 
-export interface HomeworkListResponse {
+interface HomeworkListResponse {
   code: number;
   data: {
     list: HomeworkItem[];
@@ -59,14 +59,14 @@ export interface CreateHomeworkRequest {
 }
 
 // 创建作业响应
-export interface CreateHomeworkResponse {
+interface CreateHomeworkResponse {
   code: number;
   data: number; // 作业ID
   msg: string;
 }
 
 // 作业详情响应
-export interface HomeworkDetailResponse {
+interface HomeworkDetailResponse {
   code: number;
   data: {
     id: number;
@@ -207,7 +207,7 @@ export const getHomeworkDetail = async (homeworkId: number): Promise<HomeworkDet
 /**
  * 更新作业
  */
-export const updateHomework = async (id: string, data: Partial<HomeworkItem>): Promise<any> => {
+const updateHomework = async (id: string, data: Partial<HomeworkItem>): Promise<any> => {
   try {
     const response = await authenticatedFetch(
       `http://localhost:48080/admin-api/homework/homework-tasks/${id}`,

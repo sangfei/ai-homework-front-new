@@ -2,19 +2,19 @@ import { tokenRefreshManager } from './tokenRefresh';
 import type { UserProfile } from './user';
 import { storage } from '../utils/storage';
 // 认证服务
-export interface TenantResponse {
+interface TenantResponse {
   code: number;
   data: string;
   msg: string;
 }
 
-export interface LoginRequest {
+interface LoginRequest {
   username: string;
   password: string;
   rememberMe: boolean;
 }
 
-export interface LoginResponse {
+interface LoginResponse {
   code: number;
   data: {
     accessToken: string;
@@ -43,12 +43,12 @@ let globalUserProfile: UserProfile | null = null;
 
 export const getAccessToken = (): string | null => globalAccessToken;
 export const getTenantId = (): string | null => globalTenantId;
-export const getUserId = (): string | null => globalUserId;
-export const getRefreshToken = (): string | null => globalRefreshToken;
+const getUserId = (): string | null => globalUserId;
+const getRefreshToken = (): string | null => globalRefreshToken;
 export const getUserProfile = (): UserProfile | null => globalUserProfile;
 
 // 设置认证数据（同时保存到全局变量和存储）
-export const setAuthData = (data: {
+const setAuthData = (data: {
   tenantId?: string;
   userId?: string;
   accessToken?: string;
@@ -85,12 +85,12 @@ export const setUserProfile = (profile: UserProfile): void => {
 };
 
 // 兼容旧的方法
-export const setAccessToken = (token: string): void => {
+const setAccessToken = (token: string): void => {
   globalAccessToken = token;
   storage.setAuthData('accessToken', token);
 };
 
-export const setTenantId = (tenantId: string): void => {
+const setTenantId = (tenantId: string): void => {
   globalTenantId = tenantId;
   storage.setAuthData('tenantId', tenantId);
 };
@@ -156,7 +156,7 @@ export const initializeAuth = (): void => {
 /**
  * 第一步：根据手机号获取租户ID
  */
-export const getTenantIdByMobile = async (mobile: string): Promise<string> => {
+const getTenantIdByMobile = async (mobile: string): Promise<string> => {
   try {
     const response = await fetch(
       `http://localhost:48080/admin-api/system/tenant/get-id-by-mobile?mobile=${encodeURIComponent(mobile)}`,
@@ -196,7 +196,7 @@ export const getTenantIdByMobile = async (mobile: string): Promise<string> => {
 /**
  * 第二步：执行登录
  */
-export const performLogin = async (
+const performLogin = async (
   username: string, 
   password: string, 
   tenantId: string

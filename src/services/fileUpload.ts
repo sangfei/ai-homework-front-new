@@ -2,7 +2,7 @@ import { authenticatedFetch } from '../utils/request';
 import { getTenantId } from './auth';
 
 // 文件上传请求参数
-export interface FileUploadRequest {
+interface FileUploadRequest {
   type: 1 | 2; // 1: 作业题目, 2: 作业答案
   tenantId: string;
   className: string;
@@ -15,7 +15,7 @@ export interface FileUploadRequest {
 }
 
 // 文件上传响应
-export interface FileUploadResponse {
+interface FileUploadResponse {
   code: number;
   data: {
     fileUrl: string;
