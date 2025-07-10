@@ -35,17 +35,17 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const buttonConfig = {
     homework: {
       text: '上传作业附件',
-      className: 'bg-blue-600 text-white hover:bg-blue-700',
+      buttonClassName: 'bg-blue-600 text-white hover:bg-blue-700',
       icon: Upload
     },
     answer: {
       text: '上传答案附件',
-      className: 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300',
+      buttonClassName: 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300',
       icon: Upload
     }
   };
 
-  const config = buttonConfig[type];
+  const config = buttonConfig[type] || buttonConfig.homework;
 
   // 文件大小格式化
   const formatFileSize = (bytes: number): string => {
@@ -234,10 +234,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
         <button
           type="button"
           onClick={handleUploadClick}
-          className={`w-30 px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${config.className}`}
+          className={`w-30 px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${config?.buttonClassName || 'bg-blue-600 text-white hover:bg-blue-700'}`}
         >
           <config.icon className="w-4 h-4" />
-          <span>{config.text}</span>
+          <span>{config?.text || '上传文件'}</span>
         </button>
         
         <div className="text-sm text-gray-500">
