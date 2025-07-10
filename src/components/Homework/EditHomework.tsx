@@ -12,7 +12,8 @@ interface Task {
   taskDescription: string;
   taskQuestion: string[];
   taskAnswer: string[];
-  images?: string[];
+  questionImages?: string[];
+  answerImages?: string[];
 }
 
 interface HomeworkData {
@@ -26,6 +27,24 @@ interface HomeworkData {
   taskList: Task[];
 }
 
+// 图片URL处理函数
+const processImageUrl = (url: string): string => {
+  if (!url) return '';
+  
+  // 如果已经包含协议，直接返回
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // 如果不包含协议，添加https://前缀
+  return `https://${url}`;
+};
+
+// 处理图片数组，确保所有URL都有正确的协议前缀
+const processImageUrls = (urls: string[]): string[] => {
+  if (!Array.isArray(urls)) return [];
+  return urls.map(processImageUrl).filter(url => url.length > 0);
+};
 const EditHomework: React.FC = () => {
   const navigate = useNavigate();
   const { homeworkId } = useParams<{ homeworkId: string }>();
@@ -85,7 +104,9 @@ const EditHomework: React.FC = () => {
           taskDescription: task.taskDescription || '',
           taskQuestion: Array.isArray(task.taskQuestion) ? task.taskQuestion : [],
           taskAnswer: Array.isArray(task.taskAnswer) ? task.taskAnswer : [],
-          images: []
+          // 处理已有图片，确保URL格式正确
+          questionImages: processImageUrls(task.taskQuestion || []),
+          answerImages: processImageUrls(task.taskAnswer || [])
         }));
 
         // 如果没有任务，创建一个默认任务
@@ -96,7 +117,8 @@ const EditHomework: React.FC = () => {
             taskDescription: '',
             taskQuestion: [],
             taskAnswer: [],
-            images: []
+            questionImages: [],
+            answerImages: []
           });
         }
 
@@ -174,7 +196,8 @@ const EditHomework: React.FC = () => {
       taskDescription: '',
       taskQuestion: [],
       taskAnswer: [],
-      images: []
+      questionImages: [],
+      answerImages: []
     };
     
     setHomework(prev => ({
@@ -193,9 +216,9 @@ const EditHomework: React.FC = () => {
     }
   };
 
-  // 处理任务图片变化
-  const handleTaskImagesChange = useCallback((taskId: string, images: any[]) => {
-    console.log('📸 任务图片变化:', { taskId, imagesCount: images.length });
+  // 处理任务问题图片变化
+  const handleQuestionImagesChange = useCallback((taskId: string, images: any[]) => {
+    console.log('📸 任务问题图片变化:', { taskId, imagesCount: images.length });
     
     // 提取成功上传的图片URL
     const imageUrls = images
@@ -206,21 +229,55 @@ const EditHomework: React.FC = () => {
       ...prev,
       taskList: prev.taskList.map(task =>
         task.id === taskId 
-          ? { ...task, images: imageUrls }
+          ? { ...task, questionImages: [...(task.questionImages || []), ...imageUrls] }
           : task
       )
     }));
   }, []);
 
-  // 删除现有图片
-  const handleDeleteExistingImage = useCallback((taskId: string, imageIndex: number) => {
+  // 处理任务答案图片变化
+  const handleAnswerImagesChange = useCallback((taskId: string, images: any[]) => {
+    console.log('📸 任务答案图片变化:', { taskId, imagesCount: images.length });
+    
+    // 提取成功上传的图片URL
+    const imageUrls = images
+      .filter(img => img.status === 'success' && img.url)
+      .map(img => img.url);
+    
+    setHomework(prev => ({
+      ...prev,
+      taskList: prev.taskList.map(task =>
+        task.id === taskId 
+          ? { ...task, answerImages: [...(task.answerImages || []), ...imageUrls] }
+          : task
+      )
+    }));
+  }, []);
+
+  // 删除现有问题图片
+  const handleDeleteExistingQuestionImage = useCallback((taskId: string, imageIndex: number) => {
     setHomework(prev => ({
       ...prev,
       taskList: prev.taskList.map(task =>
         task.id === taskId 
           ? { 
               ...task, 
-              images: task.images?.filter((_, index) => index !== imageIndex) || []
+              questionImages: task.questionImages?.filter((_, index) => index !== imageIndex) || []
+            }
+          : task
+      )
+    }));
+  }, []);
+
+  // 删除现有答案图片
+  const handleDeleteExistingAnswerImage = useCallback((taskId: string, imageIndex: number) => {
+    setHomework(prev => ({
+      ...prev,
+      taskList: prev.taskList.map(task =>
+        task.id === taskId 
+          ? { 
+              ...task, 
+              answerImages: task.answerImages?.filter((_, index) => index !== imageIndex) || []
             }
           : task
       )
@@ -289,8 +346,9 @@ const EditHomework: React.FC = () => {
             id: task.id,
             taskTitle: task.taskTitle.trim(),
             taskDescription: task.taskDescription.trim(),
-            taskQuestion: task.taskQuestion || [],
-            taskAnswer: task.taskAnswer || []
+            // 合并原有图片和新上传的图片
+            taskQuestion: [...(task.taskQuestion || []), ...(task.questionImages || [])],
+            taskAnswer: [...(task.taskAnswer || []), ...(task.answerImages || [])]
           }))
       };
 
@@ -560,9 +618,9 @@ const EditHomework: React.FC = () => {
                           </label>
                           <ImageUpload
                             type="homework"
-                            existingImages={task.images || []}
-                            onImagesChange={(images) => handleTaskImagesChange(task.id, images)}
-                            onExistingImageDelete={(index) => handleDeleteExistingImage(task.id, index)}
+                            existingImages={task.questionImages || []}
+                            onImagesChange={(images) => handleQuestionImagesChange(task.id, images)}
+                            onExistingImageDelete={(index) => handleDeleteExistingQuestionImage(task.id, index)}
                             maxFiles={5}
                             maxSize={5}
                           />
@@ -575,11 +633,9 @@ const EditHomework: React.FC = () => {
                           </label>
                           <ImageUpload
                             type="answer"
-                            existingImages={[]}
-                            onImagesChange={(images) => {
-                              console.log('答案图片变化:', images);
-                              // 这里可以处理答案图片的逻辑
-                            }}
+                            existingImages={task.answerImages || []}
+                            onImagesChange={(images) => handleAnswerImagesChange(task.id, images)}
+                            onExistingImageDelete={(index) => handleDeleteExistingAnswerImage(task.id, index)}
                             maxFiles={5}
                             maxSize={5}
                           />
@@ -601,7 +657,8 @@ const EditHomework: React.FC = () => {
                   <h3 className="text-sm font-medium text-blue-900 mb-1">编辑说明</h3>
                   <ul className="text-sm text-blue-700 space-y-1">
                     <li>• 修改作业信息后，系统将按照新的设定时间进行调整</li>
-                    <li>• 每个任务都可以独立上传和管理图片，互不影响</li>
+                    <li>• 每个任务的问题和答案图片可以独立管理，互不影响</li>
+                    <li>• 已有图片会自动显示，新上传的图片将与已有图片一起保存</li>
                     <li>• 支持 JPG、PNG、GIF、WebP 格式，单张图片不超过5MB</li>
                     <li>• 请确保时间设置合理，截止时间应晚于发布时间</li>
                     <li>• 至少需要保留一个有效的任务</li>
