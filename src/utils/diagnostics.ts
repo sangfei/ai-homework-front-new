@@ -56,25 +56,29 @@ export class PageDiagnostics {
 
   // 检查控制台错误
   private checkConsoleErrors(): void {
-    // 重写console.error来捕获错误
-    const originalError = console.error;
-    const errors: string[] = [];
+    // 初始化错误数组（如果不存在）
+    if (!this.diagnosticResults.errors) {
+      this.diagnosticResults.errors = [];
+    }
     
-    console.error = (...args) => {
-      errors.push(args.join(' '));
-      originalError.apply(console, args);
-    };
-    
-    // 监听未捕获的错误
-    window.addEventListener('error', (event) => {
-      errors.push(`未捕获错误: ${event.message} at ${event.filename}:${event.lineno}`);
-    });
-    
-    window.addEventListener('unhandledrejection', (event) => {
-      errors.push(`未处理的Promise拒绝: ${event.reason}`);
-    });
-    
-    this.diagnosticResults.errors = errors;
+    // 设置全局错误监听器（只设置一次）
+    if (!window.__diagnosticsErrorListenersSet) {
+      window.__diagnosticsErrorListenersSet = true;
+      
+      // 监听未捕获的错误
+      window.addEventListener('error', (event) => {
+        const errorMsg = `未捕获错误: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`;
+        this.diagnosticResults.errors.push(errorMsg);
+        console.warn('🚨 诊断工具捕获到错误:', errorMsg);
+      });
+      
+      // 监听未处理的Promise拒绝
+      window.addEventListener('unhandledrejection', (event) => {
+        const errorMsg = `未处理的Promise拒绝: ${event.reason}`;
+        this.diagnosticResults.errors.push(errorMsg);
+        console.warn('🚨 诊断工具捕获到Promise拒绝:', errorMsg);
+      });
+    }
   }
 
   // 检查React组件渲染
@@ -178,6 +182,7 @@ export class PageDiagnostics {
   // 分析可能的问题
   private analyzeIssues(): void {
     const issues: string[] = [];
+    const errorDetails: string[] = [];
     
     // 检查DOM问题
     if (!this.diagnosticResults.domState?.hasRoot) {
@@ -193,17 +198,22 @@ export class PageDiagnostics {
     const failedScripts = this.diagnosticResults.resourceStatus?.scripts?.filter(s => !s.loaded);
     if (failedScripts?.length > 0) {
       issues.push(`❌ ${failedScripts.length}个脚本未加载`);
+      errorDetails.push(`失败的脚本: ${failedScripts.map(s => s.src).join(', ')}`);
     }
     
     // 检查错误
     if (this.diagnosticResults.errors?.length > 0) {
       issues.push(`❌ 发现${this.diagnosticResults.errors.length}个错误`);
+      errorDetails.push(`具体错误: ${this.diagnosticResults.errors.join('; ')}`);
     }
     
     if (issues.length === 0) {
       console.log('✅ 未发现明显问题');
     } else {
       console.error('🚨 发现的问题:', issues);
+      if (errorDetails.length > 0) {
+        console.error('📋 错误详情:', errorDetails);
+      }
     }
   }
 }

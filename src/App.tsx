@@ -38,8 +38,14 @@ function App() {
         // 初始化认证状态
         initializeAuth();
         
-        // 运行初始诊断
-        await runPageDiagnostics();
+        // 运行初始诊断（延迟执行，确保组件已挂载）
+        setTimeout(async () => {
+          try {
+            await runPageDiagnostics();
+          } catch (diagError) {
+            console.warn('⚠️ 诊断工具运行失败:', diagError);
+          }
+        }, 100);
         
         // 检查是否有有效的登录状态
         const savedToken = getAccessToken();
