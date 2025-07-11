@@ -1,19 +1,19 @@
 // API配置文件
-export interface ApiConfig {
+interface ApiConfig {
   protocol: string;
   host: string;
   port: number;
 }
 
 // 默认API配置
-export const DEFAULT_API_CONFIG: ApiConfig = {
+const DEFAULT_API_CONFIG: ApiConfig = {
   protocol: 'https',
   host: 'www.zhifei.site',
   port: 48080
 };
 
 // 构建完整的API基础URL
-export const buildApiBaseUrl = (config: ApiConfig = DEFAULT_API_CONFIG): string => {
+const buildApiBaseUrl = (config: ApiConfig = DEFAULT_API_CONFIG): string => {
   return `${config.protocol}://${config.host}:${config.port}`;
 };
 
@@ -26,7 +26,7 @@ export const buildApiUrl = (path: string, config: ApiConfig = DEFAULT_API_CONFIG
 };
 
 // 导出默认的API基础URL
-export const API_BASE_URL = buildApiBaseUrl();
+const API_BASE_URL = buildApiBaseUrl();
 
 // 常用的API端点
 export const API_ENDPOINTS = {

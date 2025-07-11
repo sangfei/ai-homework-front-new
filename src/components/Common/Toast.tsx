@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
-export interface ToastMessage {
+interface ToastMessage {
   id: string;
   type: 'success' | 'error' | 'warning' | 'info';
   title: string;
@@ -205,4 +205,3 @@ export const useToast = () => {
   };
 };
 
-export default Toast;
