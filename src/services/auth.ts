@@ -244,6 +244,9 @@ const performLogin = async (
       userId: result.data.userId
     });
 
+    // 登录成功后启动Token自动刷新定时器
+    tokenRefreshManager.startAutoRefresh();
+
     return result.data;
   } catch (error) {
     console.error('登录失败:', error);

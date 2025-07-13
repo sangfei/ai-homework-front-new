@@ -96,13 +96,12 @@ export class TokenRefreshManager {
           method: 'POST',
           headers: {
             'tenant-id': tenantId,
-            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
             'Accept': '*/*',
             'Cache-Control': 'no-cache'
           },
-          body: JSON.stringify({
-            refreshToken: refreshToken
-          })
+          body: new URLSearchParams({ refreshToken }).toString()
         }
       );
 
