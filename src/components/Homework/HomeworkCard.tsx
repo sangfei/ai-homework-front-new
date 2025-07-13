@@ -8,13 +8,15 @@ interface HomeworkCardProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onGrade?: (id: string) => void;
+  onDetail?: (id: string) => void;
 }
 
 const HomeworkCard: React.FC<HomeworkCardProps> = ({ 
   homework, 
   onEdit, 
   onDelete, 
-  onGrade 
+  onGrade,
+  onDetail
 }) => {
   const navigate = useNavigate();
 
@@ -73,6 +75,14 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
       onEdit(homework.id);
     } else {
       navigate(`/homework/edit/${homework.id}`);
+    }
+  };
+
+  const handleDetail = () => {
+    if (onDetail) {
+      onDetail(homework.id);
+    } else {
+      navigate(`/homework/detail/${homework.id}`);
     }
   };
 
@@ -182,7 +192,7 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
       {/* 操作按钮 */}
       <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
         <button
-          onClick={() => navigate(`/homework/${homework.id}`)}
+          onClick={handleDetail}
           className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
         >
           <Eye className="w-4 h-4" />

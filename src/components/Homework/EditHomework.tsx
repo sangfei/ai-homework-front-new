@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, X, Plus, Trash2, Calendar, Clock, Info, Upload } from 'lucide-react';
+import { ArrowLeft, X, Plus, Trash2, Calendar, Clock, Info, Upload, ZoomIn } from 'lucide-react';
 import ClassSelect from '../Common/ClassSelect';
 import ImageUpload from '../Common/ImageUpload';
 import { getHomeworkDetail, updateHomeworkDetail } from '../../services/homework';
@@ -54,7 +54,12 @@ const EditHomework: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dataLoaded, setDataLoaded] = useState(false);
-  
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
+
   const [homework, setHomework] = useState<HomeworkData>({
     id: 0,
     title: '',
@@ -370,6 +375,43 @@ const EditHomework: React.FC = () => {
   // 取消编辑
   const handleCancel = () => {
     navigate('/homework');
+  };
+
+  const handlePreview = (imageUrl: string) => {
+    setPreviewImage(imageUrl);
+    setPosition({ x: 0, y: 0 });
+    setScale(1);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewImage(null);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLImageElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    setStartPosition({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLImageElement>) => {
+    if (isDragging) {
+      setPosition({ x: e.clientX - startPosition.x, y: e.clientY - startPosition.y });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLImageElement>) => {
+    e.preventDefault();
+    const newScale = scale - e.deltaY * 0.01;
+    setScale(Math.min(Math.max(0.1, newScale), 5));
   };
 
   if (isLoading) {
@@ -690,6 +732,38 @@ const EditHomework: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 图片预览模态框 */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          onClick={handleClosePreview}
+        >
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={previewImage}
+              alt="preview"
+              className="max-w-screen-xl max-h-screen-xl cursor-grab"
+              style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})` }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onWheel={handleWheel}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClosePreview();
+              }}
+              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

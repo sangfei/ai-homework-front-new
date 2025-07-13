@@ -20,6 +20,7 @@ import StudentManagement from './components/Students/StudentManagement';
 import Analytics from './components/Analytics/Analytics';
 import StudentReports from './components/Reports/StudentReports';
 import { ToastContainer, useToast } from './components/Common/Toast';
+import HomeworkDetail from './components/Homework/HomeworkDetail';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -166,6 +167,7 @@ function App() {
             <Route path="/homework/grading/:homeworkId/student/:studentId" element={<HomeworkGradingDetail />} />
             <Route path="/homework/grading/:homeworkId/analysis" element={<OverallAnalysis />} />
             <Route path="/homework/edit/:homeworkId" element={<EditHomework />} />
+            <Route path="/homework/detail/:homeworkId" element={<HomeworkDetail />} />
             <Route path="/student-report/:studentId" element={<StudentPersonalReport />} />
             <Route path="/*" element={
               <div className="flex">

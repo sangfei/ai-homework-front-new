@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Upload, X, Plus, Eye, Trash2, AlertCircle, Check } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Upload, X, Plus, Eye, Trash2, AlertCircle, Check, RefreshCw } from 'lucide-react';
 
 interface UploadedImage {
   id: string;
@@ -37,9 +37,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   taskId
 }) => {
   const [images, setImages] = useState<UploadedImage[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [showPreview, setShowPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const [isDragOver, setIsDragOver] = useState(false);
+const [showPreview, setShowPreview] = useState<string | null>(null);
+const [scale, setScale] = useState(1);
+const [position, setPosition] = useState({ x: 0, y: 0 });
+const [isDragging, setIsDragging] = useState(false);
+const [startDrag, setStartDrag] = useState({ x: 0, y: 0 });
+const fileInputRef = useRef<HTMLInputElement>(null);
 
   const buttonConfig = {
     homework: {
@@ -111,7 +115,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 ? { 
                     ...img, 
                     progress: 100, 
-                    status: isSuccess ? 'success' : 'error',
+                    status: isSuccess ? ('success' as const) : ('error' as const),
                     error: isSuccess ? undefined : '上传失败，请重试',
                     url: isSuccess ? `https://example.com/uploads/${image.name}` : undefined
                   }
@@ -152,7 +156,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         id: Date.now().toString() + Math.random(),
         name: file.name,
         size: file.size,
-        status: 'uploading',
+        status: 'uploading' as const,
         progress: 0,
         file: file,
         preview: createPreviewUrl(file)
@@ -235,8 +239,51 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   // 预览图片
   const handlePreviewImage = (url: string) => {
-    setShowPreview(url);
-  };
+  setShowPreview(url);
+  setScale(1);
+  setPosition({ x: 0, y: 0 });
+};
+
+const handleWheel = (e: React.WheelEvent) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.1 : 0.1;
+  setScale(prev => Math.max(0.1, Math.min(prev + delta, 5)));
+};
+
+const handleMouseDown = (e: React.MouseEvent) => {
+  setIsDragging(true);
+  setStartDrag({
+    x: e.clientX - position.x,
+    y: e.clientY - position.y
+  });
+};
+
+useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition(prev => ({
+        x: e.clientX - startDrag.x,
+        y: e.clientY - startDrag.y
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, startDrag]);
+
+const handleMouseLeave = () => {
+  setIsDragging(false);
+};
 
   // 获取状态图标
   const getStatusIcon = (image: UploadedImage) => {
@@ -440,6 +487,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               alt="预览"
               className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
+              onWheel={handleWheel}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              style={{
+                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                cursor: isDragging ? 'grabbing' : 'grab',
+                transition: 'cursor 0.2s ease'
+              }}
             />
             <button
               onClick={() => setShowPreview(null)}

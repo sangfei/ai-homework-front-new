@@ -96,7 +96,6 @@ export class TokenRefreshManager {
           method: 'POST',
           headers: {
             'tenant-id': tenantId,
-            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
             'Accept': '*/*',
             'Cache-Control': 'no-cache'

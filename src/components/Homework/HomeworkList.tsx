@@ -120,6 +120,10 @@ const HomeworkList: React.FC = () => {
     navigate(`/homework/edit/${homeworkId}`);
   };
 
+  const handleDetail = (homeworkId: string) => {
+    navigate(`/homework/detail/${homeworkId}`);
+  };
+
   // 处理批改操作
   const handleGrade = (homeworkId: string) => {
     navigate(`/homework/grading/${homeworkId}`);
@@ -304,6 +308,7 @@ const HomeworkList: React.FC = () => {
                     onEdit={handleEdit}
                     onDelete={handleDeleteClick}
                     onGrade={handleGrade}
+                    onDetail={handleDetail}
                   />
                 ))}
               </div>
