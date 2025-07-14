@@ -246,8 +246,8 @@ const fileInputRef = useRef<HTMLInputElement>(null);
 
 const handleWheel = (e: React.WheelEvent) => {
   e.preventDefault();
-  const delta = e.deltaY > 0 ? -0.1 : 0.1;
-  setScale(prev => Math.max(0.1, Math.min(prev + delta, 5)));
+  const newScale = scale - e.deltaY * 0.01;
+  setScale(Math.min(Math.max(0.1, newScale), 5)); // Clamp scale between 0.1 and 5
 };
 
 const handleMouseDown = (e: React.MouseEvent) => {
