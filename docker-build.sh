@@ -33,6 +33,15 @@ if [ ! -f "vite.config.ts" ]; then
     exit 1
 fi
 
+# 验证nginx配置语法
+echo -e "${YELLOW}🔍 验证nginx配置语法...${NC}"
+docker run --rm -v $(pwd)/nginx.conf:/etc/nginx/conf.d/default.conf nginx:alpine nginx -t
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ nginx配置语法错误${NC}"
+    exit 1
+fi
+
 # 构建生产镜像
 echo -e "${YELLOW}🔨 构建生产镜像...${NC}"
 docker build \

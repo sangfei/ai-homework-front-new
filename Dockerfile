@@ -29,6 +29,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # 复制构建产物到nginx目录
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# 验证nginx配置文件语法
+RUN nginx -t
+
 # 复制SSL证书（如果需要HTTPS）
 COPY ssl /etc/nginx/ssl
 
