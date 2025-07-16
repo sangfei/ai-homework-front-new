@@ -4,9 +4,6 @@ FROM node:18-alpine AS builder
 # 设置工作目录
 WORKDIR /app
 
-# 安装构建所需的系统依赖
-RUN apk add --no-cache python3 make g++
-
 # 复制package文件并安装依赖（利用Docker缓存层）
 COPY package*.json ./
 

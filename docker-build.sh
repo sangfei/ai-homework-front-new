@@ -33,10 +33,6 @@ if [ ! -f "vite.config.ts" ]; then
     exit 1
 fi
 
-# 清理旧的构建缓存
-echo -e "${YELLOW}🧹 清理构建缓存...${NC}"
-docker builder prune -f
-
 # 构建生产镜像
 echo -e "${YELLOW}🔨 构建生产镜像...${NC}"
 docker build \
@@ -44,7 +40,6 @@ docker build \
     --tag ${IMAGE_NAME}:${TAG} \
     --tag ${IMAGE_NAME}:latest \
     --build-arg NODE_ENV=production \
-    --progress=plain \
     .
 
 if [ $? -ne 0 ]; then
@@ -57,7 +52,6 @@ echo -e "${YELLOW}🔨 构建开发镜像...${NC}"
 docker build \
     -f Dockerfile.dev \
     --tag ${IMAGE_NAME}:dev \
-    --progress=plain \
     .
 
 if [ $? -ne 0 ]; then
