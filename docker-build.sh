@@ -22,6 +22,17 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
+# 检查必要文件是否存在
+if [ ! -f "package.json" ]; then
+    echo -e "${RED}❌ package.json文件不存在${NC}"
+    exit 1
+fi
+
+if [ ! -f "vite.config.ts" ]; then
+    echo -e "${RED}❌ vite.config.ts文件不存在${NC}"
+    exit 1
+fi
+
 # 清理旧的构建缓存
 echo -e "${YELLOW}🧹 清理构建缓存...${NC}"
 docker builder prune -f
@@ -33,14 +44,26 @@ docker build \
     --tag ${IMAGE_NAME}:${TAG} \
     --tag ${IMAGE_NAME}:latest \
     --build-arg NODE_ENV=production \
+    --progress=plain \
     .
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ 生产镜像构建失败${NC}"
+    exit 1
+fi
 
 # 构建开发镜像
 echo -e "${YELLOW}🔨 构建开发镜像...${NC}"
 docker build \
     -f Dockerfile.dev \
     --tag ${IMAGE_NAME}:dev \
+    --progress=plain \
     .
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ 开发镜像构建失败${NC}"
+    exit 1
+fi
 
 # 显示镜像信息
 echo -e "${GREEN}📊 构建完成的镜像:${NC}"

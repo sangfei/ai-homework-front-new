@@ -4,9 +4,14 @@ FROM node:18-alpine AS builder
 # 设置工作目录
 WORKDIR /app
 
+# 安装构建所需的系统依赖
+RUN apk add --no-cache python3 make g++
+
 # 复制package文件并安装依赖（利用Docker缓存层）
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+
+# 安装所有依赖（包括开发依赖，构建需要）
+RUN npm ci
 
 # 复制源代码
 COPY . .
@@ -22,13 +27,13 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
 # 复制自定义nginx配置
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # 复制构建产物到nginx目录
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # 复制SSL证书（如果需要HTTPS）
-COPY --from=builder /app/ssl /etc/nginx/ssl
+COPY ssl /etc/nginx/ssl
 
 # 设置正确的文件权限
 RUN chown -R nextjs:nodejs /usr/share/nginx/html && \
@@ -46,7 +51,7 @@ USER nextjs
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
 # 启动nginx
 CMD ["nginx", "-g", "daemon off;"]
