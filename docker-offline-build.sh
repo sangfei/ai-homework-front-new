@@ -22,7 +22,7 @@ fi
 
 # 检查必要文件
 echo -e "${YELLOW}📋 检查必要文件...${NC}"
-required_files=("package.json" "vite.config.ts" "nginx.conf" "Dockerfile" "Dockerfile.dev")
+required_files=("package.json" "vite.config.ts" "nginx.conf" "Dockerfile")
 for file in "${required_files[@]}"; do
     if [ ! -f "$file" ]; then
         echo -e "${RED}❌ $file 文件不存在${NC}"
@@ -32,42 +32,28 @@ done
 
 # 手动验证nginx配置语法（不依赖网络）
 echo -e "${YELLOW}🔍 手动验证nginx配置...${NC}"
-if grep -q "must-revalidate" nginx.conf; then
-    echo -e "${RED}❌ nginx.conf中包含无效的must-revalidate配置${NC}"
+if grep -q "include /etc/nginx/conf.d/common.conf" nginx.conf; then
+    echo -e "${RED}❌ nginx.conf中包含无效的include指令${NC}"
     exit 1
-fi
-
-if ! grep -q "gzip on;" nginx.conf; then
-    echo -e "${YELLOW}⚠️ nginx.conf中缺少gzip配置${NC}"
 fi
 
 echo -e "${GREEN}✅ nginx配置检查通过${NC}"
 
 # 构建生产镜像（跳过网络验证）
 echo -e "${YELLOW}🔨 构建生产镜像...${NC}"
+echo -e "${YELLOW}注意：在网络受限环境中，确保已经提前拉取了基础镜像${NC}"
+echo -e "${YELLOW}如果构建失败，请先手动拉取：${NC}"
+echo -e "${YELLOW}docker pull node:18-alpine${NC}"
+echo -e "${YELLOW}docker pull nginx:alpine${NC}"
+
 docker build \
-    --target production \
     --tag ${IMAGE_NAME}:${TAG} \
     --tag ${IMAGE_NAME}:latest \
     --build-arg NODE_ENV=production \
-    --no-cache \
     .
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ 生产镜像构建失败${NC}"
-    exit 1
-fi
-
-# 构建开发镜像
-echo -e "${YELLOW}🔨 构建开发镜像...${NC}"
-docker build \
-    -f Dockerfile.dev \
-    --tag ${IMAGE_NAME}:dev \
-    --no-cache \
-    .
-
-if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ 开发镜像构建失败${NC}"
     exit 1
 fi
 
@@ -77,5 +63,4 @@ docker images | grep ${IMAGE_NAME}
 
 echo -e "${GREEN}✅ 离线构建完成！${NC}"
 echo -e "${GREEN}运行命令:${NC}"
-echo -e "  生产环境: ${YELLOW}./docker-run.sh production${NC}"
-echo -e "  开发环境: ${YELLOW}./docker-run.sh development${NC}"
+echo -e "  生产环境: ${YELLOW}docker run -p 80:80 -p 443:443 ${IMAGE_NAME}:${TAG}${NC}"
