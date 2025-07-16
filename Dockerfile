@@ -46,7 +46,7 @@ EXPOSE 80 443
 # 切换到非root用户
 USER nextjs
 
-# 健康检查
+# 健康检查 - 使用nginx自带的wget
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
