@@ -6,6 +6,7 @@ set -e
 # 颜色定义
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 # 配置
@@ -14,6 +15,13 @@ CONTAINER_NAME="ai-homework-app"
 ENV=${1:-production}
 
 echo -e "${GREEN}🚀 启动 AI作业管理系统...${NC}"
+
+# 检查镜像是否存在
+if ! docker images ${IMAGE_NAME} --format "table {{.Repository}}:{{.Tag}}" | grep -q "${IMAGE_NAME}"; then
+    echo -e "${RED}❌ 镜像 ${IMAGE_NAME} 不存在，请先运行构建脚本${NC}"
+    echo -e "${YELLOW}运行: ./docker-build.sh${NC}"
+    exit 1
+fi
 
 # 停止并删除现有容器
 if [ "$(docker ps -aq -f name=${CONTAINER_NAME})" ]; then
@@ -34,6 +42,19 @@ if [ "$ENV" = "development" ] || [ "$ENV" = "dev" ]; then
     
     echo -e "${GREEN}✅ 开发环境已启动！${NC}"
     echo -e "${GREEN}访问地址: http://localhost:5173${NC}"
+    
+    # 等待服务启动
+    echo -e "${YELLOW}⏳ 等待开发服务器启动...${NC}"
+    sleep 5
+    
+    # 检查容器状态
+    if docker ps | grep -q "${CONTAINER_NAME}-dev"; then
+        echo -e "${GREEN}🎉 开发服务器运行正常${NC}"
+    else
+        echo -e "${RED}❌ 开发服务器启动失败${NC}"
+        docker logs ${CONTAINER_NAME}-dev
+        exit 1
+    fi
 else
     echo -e "${YELLOW}🏭 启动生产环境...${NC}"
     docker run -d \
@@ -49,13 +70,36 @@ else
     echo -e "${GREEN}✅ 生产环境已启动！${NC}"
     echo -e "${GREEN}访问地址: http://localhost${NC}"
     echo -e "${GREEN}HTTPS地址: https://localhost${NC}"
+    
+    # 等待服务启动
+    echo -e "${YELLOW}⏳ 等待Web服务器启动...${NC}"
+    sleep 3
+    
+    # 检查容器状态
+    if docker ps | grep -q "${CONTAINER_NAME}"; then
+        echo -e "${GREEN}🎉 Web服务器运行正常${NC}"
+        
+        # 测试HTTP访问
+        if curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -q "200"; then
+            echo -e "${GREEN}✅ HTTP服务正常${NC}"
+        else
+            echo -e "${YELLOW}⚠️ HTTP服务可能需要更多时间启动${NC}"
+        fi
+    else
+        echo -e "${RED}❌ Web服务器启动失败${NC}"
+        docker logs ${CONTAINER_NAME}
+        exit 1
+    fi
 fi
 
 # 显示容器状态
 echo -e "${YELLOW}📊 容器状态:${NC}"
 docker ps | grep ${IMAGE_NAME}
 
-# 显示日志
-echo -e "${YELLOW}📝 实时日志 (Ctrl+C退出):${NC}"
-sleep 2
-docker logs -f ${CONTAINER_NAME}${ENV:+-dev} 2>/dev/null || docker logs -f ${CONTAINER_NAME}
+# 显示日志选项
+echo -e "${YELLOW}📝 查看日志命令:${NC}"
+if [ "$ENV" = "development" ] || [ "$ENV" = "dev" ]; then
+    echo -e "  实时日志: ${GREEN}docker logs -f ${CONTAINER_NAME}-dev${NC}"
+else
+    echo -e "  实时日志: ${GREEN}docker logs -f ${CONTAINER_NAME}${NC}"
+fi
