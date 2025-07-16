@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # 前端应用
+  ai-homework-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: ai-homework-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # 日志持久化
+      - ./logs:/var/log/nginx
+      # SSL证书挂载（如果需要外部证书）
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - ai-homework-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 开发环境服务（可选）
+  ai-homework-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ai-homework-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=https://www.zhifei.site:48080
+    networks:
+      - ai-homework-network
+    profiles:
+      - dev
+
+networks:
+  ai-homework-network:
+    driver: bridge
+
+volumes:
+  nginx_logs:
+    driver: local
