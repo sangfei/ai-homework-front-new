@@ -4,6 +4,7 @@ import { initializeAuth, getAccessToken, getUserProfile } from './services/auth'
 import { ErrorBoundary } from './components/Debug/ErrorBoundary';
 import { LoadingDiagnostics } from './components/Debug/LoadingDiagnostics';
 import { runPageDiagnostics } from './utils/diagnostics';
+import { tokenEvents } from './services/tokenRefresh';
 import LoginPage from './components/Auth/LoginPage';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
@@ -103,10 +104,33 @@ function App() {
       handleLogout();
     };
 
-    window.addEventListener('tokenRefreshFailed', handleTokenRefreshFailed);
+    // 使用标准化的事件对象
+    window.addEventListener('tokenRefreshFailed', () => {
+      handleTokenRefreshFailed();
+    });
     
     return () => {
-      window.removeEventListener('tokenRefreshFailed', handleTokenRefreshFailed);
+      window.removeEventListener('tokenRefreshFailed', () => {
+        handleTokenRefreshFailed();
+      });
+    };
+  }, []);
+  
+  // 监听token刷新成功事件
+  useEffect(() => {
+    const handleTokenRefreshed = () => {
+      console.log('✅ Token刷新成功，应用已更新认证状态');
+      // 可以在这里执行一些需要在token刷新后进行的操作
+    };
+    
+    window.addEventListener('tokenRefreshed', () => {
+      handleTokenRefreshed();
+    });
+    
+    return () => {
+      window.removeEventListener('tokenRefreshed', () => {
+        handleTokenRefreshed();
+      });
     };
   }, []);
 

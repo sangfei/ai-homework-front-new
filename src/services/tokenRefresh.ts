@@ -2,6 +2,12 @@ import { storage } from '../utils/storage';
 import { authenticatedFetch } from '../utils/request';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
+// 添加事件总线，用于通知token更新
+export const tokenEvents = {
+  tokenRefreshed: new CustomEvent('tokenRefreshed'),
+  tokenRefreshFailed: new CustomEvent('tokenRefreshFailed')
+};
+
 // Token刷新响应接口
 interface RefreshTokenResponse {
   code: number;
@@ -23,6 +29,7 @@ export class TokenRefreshManager {
   private retryDelay = 5000; // 5秒
   private lastRefreshTime = 0; // 记录上次刷新时间
   private minRefreshInterval = 60000; // 最小刷新间隔1分钟，防止频繁刷新
+  private refreshPromise: Promise<boolean> | null = null; // 用于处理并发请求
 
   static getInstance(): TokenRefreshManager {
     if (!TokenRefreshManager.instance) {
@@ -64,9 +71,10 @@ export class TokenRefreshManager {
    * 执行Token刷新
    */
   private async performTokenRefresh(retryCount = 0): Promise<boolean> {
-    if (this.isRefreshing) {
-      console.log('🔄 Token刷新正在进行中，跳过本次刷新');
-      return false;
+    // 如果已经有刷新操作在进行中，返回该Promise
+    if (this.refreshPromise) {
+      console.log('🔄 Token刷新正在进行中，复用现有Promise');
+      return this.refreshPromise;
     }
 
     // 检查是否距离上次刷新时间太短
@@ -86,65 +94,74 @@ export class TokenRefreshManager {
     }
 
     this.isRefreshing = true;
+    // 创建刷新Promise
+    this.refreshPromise = (async () => {
+      try {
+        console.log('🔄 开始刷新Token...');
+        
+        const response = await fetch(
+          buildApiUrl(API_ENDPOINTS.REFRESH_TOKEN),
+          {
+            method: 'POST',
+            headers: {
+              'tenant-id': tenantId,
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': '*/*',
+              'Cache-Control': 'no-cache'
+            },
+            body: new URLSearchParams({ refreshToken }).toString()
+          }
+        );
 
-    try {
-      console.log('🔄 开始刷新Token...');
-      
-      const response = await fetch(
-        buildApiUrl(API_ENDPOINTS.REFRESH_TOKEN),
-        {
-          method: 'POST',
-          headers: {
-            'tenant-id': tenantId,
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': '*/*',
-            'Cache-Control': 'no-cache'
-          },
-          body: new URLSearchParams({ refreshToken }).toString()
+        if (!response.ok) {
+          throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
+        const result: RefreshTokenResponse = await response.json();
+
+        if (result.code !== 0) {
+          throw new Error(result.msg || 'Token刷新失败');
+        }
+
+        if (!result.data || !result.data.accessToken || !result.data.refreshToken) {
+          throw new Error('Token刷新响应数据异常');
+        }
+
+        // 更新Token
+        this.updateTokens(result.data.accessToken, result.data.refreshToken);
+        
+        // 更新最后刷新时间
+        this.lastRefreshTime = Date.now();
+        
+        console.log('✅ Token刷新成功');
+        
+        // 触发token刷新成功事件
+        window.dispatchEvent(tokenEvents.tokenRefreshed);
+        
+        return true;
+      } catch (error) {
+        console.error('❌ Token刷新失败:', error);
+        
+        // 重试机制
+        if (retryCount < this.maxRetries) {
+          console.log(`🔄 ${this.retryDelay / 1000}秒后进行第${retryCount + 1}次重试...`);
+          setTimeout(() => {
+            this.performTokenRefresh(retryCount + 1);
+          }, this.retryDelay);
+          return false;
+        } else {
+          console.error('❌ Token刷新重试次数已达上限，但继续保持登录状态');
+          // 不立即登出，而是等待下次定时刷新
+          return false;
+        }
+      } finally {
+        this.isRefreshing = false;
+        this.refreshPromise = null;
       }
-
-      const result: RefreshTokenResponse = await response.json();
-
-      if (result.code !== 0) {
-        throw new Error(result.msg || 'Token刷新失败');
-      }
-
-      if (!result.data || !result.data.accessToken || !result.data.refreshToken) {
-        throw new Error('Token刷新响应数据异常');
-      }
-
-      // 更新Token
-      this.updateTokens(result.data.accessToken, result.data.refreshToken);
-      
-      // 更新最后刷新时间
-      this.lastRefreshTime = Date.now();
-      
-      console.log('✅ Token刷新成功');
-      return true;
-
-    } catch (error) {
-      console.error('❌ Token刷新失败:', error);
-      
-      // 重试机制
-      if (retryCount < this.maxRetries) {
-        console.log(`🔄 ${this.retryDelay / 1000}秒后进行第${retryCount + 1}次重试...`);
-        setTimeout(() => {
-          this.performTokenRefresh(retryCount + 1);
-        }, this.retryDelay);
-        return false;
-      } else {
-        console.error('❌ Token刷新重试次数已达上限，但继续保持登录状态');
-        // 不立即登出，而是等待下次定时刷新
-        return false;
-      }
-    } finally {
-      this.isRefreshing = false;
+    })();
+    
+    return this.refreshPromise;
     }
   }
 
@@ -164,6 +181,9 @@ export class TokenRefreshManager {
     this.resetFailureCount();
 
     console.log('🔄 Token已更新到全局变量和存储');
+    
+    // 触发token更新事件
+    window.dispatchEvent(tokenEvents.tokenRefreshed);
   }
 
   /**
@@ -183,6 +203,9 @@ export class TokenRefreshManager {
       
       // 通知用户重新登录
       window.dispatchEvent(new CustomEvent('tokenRefreshFailed'));
+      
+      // 触发token刷新失败事件
+      window.dispatchEvent(tokenEvents.tokenRefreshFailed);
       
       // 跳转到登录页
       setTimeout(() => {

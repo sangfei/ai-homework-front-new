@@ -2,6 +2,7 @@ import { tokenRefreshManager } from './tokenRefresh';
 import type { UserProfile } from './user';
 import { storage } from '../utils/storage';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
+
 // 认证服务
 interface TenantResponse {
   code: number;
@@ -68,6 +69,11 @@ const setAuthData = (data: {
   if (data.accessToken) {
     globalAccessToken = data.accessToken;
     storage.setAuthData('accessToken', data.accessToken);
+    
+    // 通知token已更新
+    window.dispatchEvent(new CustomEvent('accessTokenUpdated', { 
+      detail: { token: data.accessToken } 
+    }));
   }
   
   if (data.refreshToken) {
