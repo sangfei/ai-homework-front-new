@@ -118,13 +118,7 @@ export const getHomeworkList = async (params: HomeworkQueryParams = {}): Promise
       }
     );
 
-    const result: HomeworkListResponse = await response.json();
-    
-    if (result.code !== 0) {
-      throw new Error(result.msg || '获取作业列表失败');
-    }
-
-    return result.data;
+    return await handleApiResponse<HomeworkListResponse['data']>(response);
   } catch (error) {
     console.error('获取作业列表失败:', error);
     if (error instanceof Error) {
@@ -155,21 +149,9 @@ export const createHomework = async (data: CreateHomeworkRequest): Promise<numbe
 
     console.log('📡 收到创建作业响应:', response.status, response.statusText);
     
-    const result: CreateHomeworkResponse = await response.json();
-    console.log('📋 创建作业响应数据:', result);
-    
-    if (result.code !== 0) {
-      console.error('❌ 创建作业失败 - 服务器返回错误:', result);
-      throw new Error(result.msg || '创建作业失败');
-    }
-
-    if (!result.data || typeof result.data !== 'number') {
-      console.error('❌ 创建作业失败 - 无效的作业ID:', result.data);
-      throw new Error('服务器返回的作业ID无效');
-    }
-
-    console.log('✅ 创建作业成功，作业ID:', result.data);
-    return result.data;
+    const result = await handleApiResponse<number>(response);
+    console.log('✅ 创建作业成功，作业ID:', result);
+    return result;
   } catch (error) {
     console.error('创建作业失败:', error);
     throw error;
@@ -192,13 +174,7 @@ export const getHomeworkDetail = async (homeworkId: number): Promise<HomeworkDet
       }
     );
 
-    const result: HomeworkDetailResponse = await response.json();
-    
-    if (result.code !== 0) {
-      throw new Error(result.msg || '获取作业详情失败');
-    }
-
-    return result.data;
+    return await handleApiResponse<HomeworkDetailResponse['data']>(response);
   } catch (error) {
     console.error('获取作业详情失败:', error);
     throw error;
@@ -256,16 +232,9 @@ export const updateHomeworkDetail = async (homeworkDetail: any): Promise<any> =>
 
     console.log('📡 收到作业更新响应:', response.status, response.statusText);
     
-    const result = await response.json();
-    console.log('📋 作业更新响应数据:', result);
-    
-    if (result.code !== 0) {
-      console.error('❌ 作业更新失败 - 服务器返回错误:', result);
-      throw new Error(result.msg || '作业更新失败');
-    }
-
+    const result = await handleApiResponse<any>(response);
     console.log('✅ 作业更新成功');
-    return result.data;
+    return result;
   } catch (error) {
     console.error('作业更新失败:', error);
     throw error;

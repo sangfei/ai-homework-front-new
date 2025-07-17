@@ -45,13 +45,7 @@ export const getClassList = async (params?: {
       }
     );
 
-    const result: ClassListResponse = await response.json();
-    
-    if (result.code !== 0) {
-      throw new Error(result.msg || '获取班级列表失败');
-    }
-
-    return result.data || [];
+    return await handleApiResponse<ClassItem[]>(response) || [];
   } catch (error) {
     console.error('获取班级列表失败:', error);
     if (error instanceof Error) {

@@ -65,23 +65,19 @@ export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promi
       throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
     }
 
-    const result: FileUploadResponse = await response.json();
+    const result = await handleApiResponse<FileUploadResponse['data']>(response);
     
-    if (result.code !== 0) {
-      throw new Error(result.msg || '文件上传失败');
-    }
-
-    if (!result.data || !result.data.fileUrl) {
+    if (!result || !result.fileUrl) {
       throw new Error('服务器返回的文件URL无效');
     }
 
     console.log('✅ 文件上传成功:', {
       fileName: params.file.name,
-      fileUrl: result.data.fileUrl,
+      fileUrl: result.fileUrl,
       type: params.type === 1 ? '作业题目' : '作业答案'
     });
 
-    return result.data.fileUrl;
+    return result.fileUrl;
   } catch (error) {
     console.error('❌ 文件上传失败:', error);
     throw error;
