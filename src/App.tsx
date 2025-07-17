@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { initializeAuth, getAccessToken, getUserProfile } from './services/auth';
+import { getUserProfile as getUserProfileFromService } from './services/user';
 import { ErrorBoundary } from './components/Debug/ErrorBoundary';
 import { LoadingDiagnostics } from './components/Debug/LoadingDiagnostics';
 import { runPageDiagnostics } from './utils/diagnostics';
@@ -54,22 +55,39 @@ function App() {
         const savedUserProfile = getUserProfile();
         
         if (savedToken && savedUserProfile) {
-          setCurrentUser({
-            name: savedUserProfile.nickname || savedUserProfile.username,
-            role: savedUserProfile.dept?.className || '教师',
-            avatar: savedUserProfile.avatar || ''
-          });
-          setIsLoggedIn(true);
-          console.log('✅ 用户登录状态已恢复');
+          // 验证token是否仍然有效
+          try {
+            console.log('🔍 验证已保存的token有效性...');
+            const validUserProfile = await getUserProfileFromService();
+            
+            setCurrentUser({
+              name: validUserProfile.nickname || validUserProfile.username,
+              role: validUserProfile.dept?.className || '教师',
+              avatar: validUserProfile.avatar || ''
+            });
+            setIsLoggedIn(true);
+            console.log('✅ 用户登录状态已恢复');
+          } catch (error) {
+            console.warn('⚠️ 保存的token已失效，需要重新登录');
+            // authenticatedFetch 会自动处理token清理和重定向
+          }
         } else if (savedToken) {
-          // 有Token但没有用户信息，可能需要重新获取
-          console.log('🔄 检测到Token但缺少用户信息，保持登录状态');
-          setCurrentUser({
-            name: '用户',
-            role: '教师',
-            avatar: ''
-          });
-          setIsLoggedIn(true);
+          // 有Token但没有用户信息，验证token有效性
+          try {
+            console.log('🔄 检测到Token但缺少用户信息，验证token有效性...');
+            const validUserProfile = await getUserProfileFromService();
+            
+            setCurrentUser({
+              name: validUserProfile.nickname || validUserProfile.username,
+              role: validUserProfile.dept?.className || '教师',
+              avatar: validUserProfile.avatar || ''
+            });
+            setIsLoggedIn(true);
+            console.log('✅ Token验证成功，用户信息已更新');
+          } catch (error) {
+            console.warn('⚠️ Token验证失败，需要重新登录');
+            // authenticatedFetch 会自动处理token清理和重定向
+          }
         }
         
         console.log('✅ 应用初始化完成');
