@@ -68,6 +68,10 @@ export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promi
     const result = await handleApiResponse<FileUploadResponse['data']>(response);
 
     if (!result || !result.fileUrl) {
+      throw new Error('上传失败：未获取到文件URL');
+    }
+
+    console.log('✅ 文件上传成功:', {
       fileName: params.file.name,
       fileUrl: result.fileUrl,
       type: params.type === 1 ? '作业题目' : '作业答案'
