@@ -136,6 +136,8 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
       return response;
     } catch (error) {
       console.error('🚨 请求失败:', {
+      }
+      )
       console.warn(`${logPrefix} 🔒 检测到后端认证失败，尝试刷新token`);
       
       try {
