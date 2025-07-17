@@ -47,12 +47,17 @@ const CreateHomework: React.FC = () => {
   // 获取默认时间
   const getDefaultTimes = () => {
     const now = new Date();
+    
+    // 设置作业日期为当天的上午8点整
+    const assignedDate = new Date(now);
+    assignedDate.setHours(8, 0, 0, 0);
+    
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0); // 明天上午9:00
 
     return {
-      assignedDate: now.toISOString().slice(0, 16), // YYYY-MM-DDTHH:mm
+      assignedDate: assignedDate.toISOString().slice(0, 16), // YYYY-MM-DDTHH:mm
       publishTime: now.toISOString().slice(0, 16),
       ddlTime: tomorrow.toISOString().slice(0, 16)
     };
@@ -439,7 +444,17 @@ const CreateHomework: React.FC = () => {
                 <input
                   type="datetime-local"
                   value={formData.assignedDate}
-                  onChange={(e) => setFormData({ ...formData, assignedDate: e.target.value })}
+                  onChange={(e) => {
+                    // 获取用户选择的日期部分
+                    const selectedDate = new Date(e.target.value);
+                    // 重置为上午8点整
+                    selectedDate.setHours(8, 0, 0, 0);
+                    // 更新表单数据
+                    setFormData({ 
+                      ...formData, 
+                      assignedDate: selectedDate.toISOString().slice(0, 16) 
+                    });
+                  }}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.assignedDate ? 'border-red-300' : 'border-gray-300'
                   }`}
@@ -447,7 +462,7 @@ const CreateHomework: React.FC = () => {
                 {errors.assignedDate && (
                   <p className="mt-1 text-sm text-red-600">{errors.assignedDate}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">默认为当前时间</p>
+                <p className="mt-1 text-xs text-gray-500">默认为当天上午8:00</p>
               </div>
 
               {/* 发布时间 */}
