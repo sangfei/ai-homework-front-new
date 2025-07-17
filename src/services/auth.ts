@@ -1,7 +1,7 @@
 import { tokenRefreshManager } from './tokenRefresh';
 import type { UserProfile } from './user';
 import { storage } from '../utils/storage';
-import { buildApiUrl, API_ENDPOINTS } from '../config/api';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api'; 
 
 // 认证服务
 interface TenantResponse {
@@ -32,6 +32,7 @@ let globalTenantId: string | null = null;
 let globalUserId: string | null = null;
 let globalAccessToken: string | null = null;
 let globalRefreshToken: string | null = null;
+let globalExpiresTime: number | null = null;
 let globalUserProfile: UserProfile | null = null;
 
 // 将全局变量暴露到window对象，方便调试和其他模块访问
@@ -39,14 +40,16 @@ let globalUserProfile: UserProfile | null = null;
   getTenantId: () => globalTenantId,
   getUserId: () => globalUserId,
   getAccessToken: () => globalAccessToken,
-  getRefreshToken: () => globalRefreshToken,
+  getRefreshToken: () => globalRefreshToken, 
+  getExpiresTime: () => globalExpiresTime,
   getUserProfile: () => globalUserProfile
 };
 
 export const getAccessToken = (): string | null => globalAccessToken;
 export const getTenantId = (): string | null => globalTenantId;
 const getUserId = (): string | null => globalUserId;
-const getRefreshToken = (): string | null => globalRefreshToken;
+export const getRefreshToken = (): string | null => globalRefreshToken;
+export const getExpiresTime = (): number | null => globalExpiresTime;
 export const getUserProfile = (): UserProfile | null => globalUserProfile;
 
 // 设置认证数据（同时保存到全局变量和存储）
@@ -54,7 +57,8 @@ const setAuthData = (data: {
   tenantId?: string;
   userId?: string;
   accessToken?: string;
-  refreshToken?: string;
+  refreshToken?: string; 
+  expiresTime?: number;
 }): void => {
   if (data.tenantId) {
     globalTenantId = data.tenantId;
@@ -79,6 +83,11 @@ const setAuthData = (data: {
   if (data.refreshToken) {
     globalRefreshToken = data.refreshToken;
     storage.setAuthData('refreshToken', data.refreshToken);
+  }
+
+  if (data.expiresTime) {
+    globalExpiresTime = data.expiresTime;
+    storage.setAuthData('expiresTime', data.expiresTime.toString());
   }
   
   console.log('🔐 认证数据已保存到全局变量和存储');
@@ -108,6 +117,7 @@ export const clearAccessToken = (): void => {
   globalUserId = null;
   globalAccessToken = null;
   globalRefreshToken = null;
+  globalExpiresTime = null;
   globalUserProfile = null;
   
   storage.clearAllAuthData();
@@ -124,6 +134,7 @@ export const initializeAuth = (): void => {
   const savedUserId = storage.getAuthData('userId');
   const savedAccessToken = storage.getAuthData('accessToken');
   const savedRefreshToken = storage.getAuthData('refreshToken');
+  const savedExpiresTime = storage.getAuthData('expiresTime');
   const savedUserProfile = storage.getAuthData('userProfile');
   
   if (savedTenantId) {
@@ -141,6 +152,15 @@ export const initializeAuth = (): void => {
   if (savedRefreshToken) {
     globalRefreshToken = savedRefreshToken;
   }
+
+  if (savedExpiresTime) {
+    try {
+      globalExpiresTime = parseInt(savedExpiresTime, 10);
+    } catch (error) {
+      console.error('解析过期时间失败:', error);
+      storage.removeAuthData('expiresTime');
+    }
+  }
   
   if (savedUserProfile) {
     try {
@@ -154,7 +174,22 @@ export const initializeAuth = (): void => {
   // 如果有有效的Token，启动自动刷新
   if (savedAccessToken && savedRefreshToken) {
     console.log('🔐 认证数据已恢复，将在30秒后启动自动刷新Token');
-    tokenRefreshManager.startAutoRefresh();
+    
+    // 检查token是否接近过期
+    const now = Date.now();
+    const expiresTime = globalExpiresTime || (now + 30 * 60 * 1000); // 默认30分钟
+    const timeUntilExpiration = expiresTime - now;
+    
+    if (timeUntilExpiration < 5 * 60 * 1000) { // 如果剩余时间小于5分钟
+      console.log('⚠️ Token即将过期，立即刷新');
+      // 立即刷新token
+      setTimeout(() => {
+        tokenRefreshManager.manualRefresh();
+      }, 1000);
+    } else {
+      // 启动自动刷新
+      tokenRefreshManager.startAutoRefresh();
+    }
   } else {
     console.log('🔐 未找到有效的认证数据');
   }
@@ -248,6 +283,7 @@ const performLogin = async (
       accessToken: result.data.accessToken,
       refreshToken: result.data.refreshToken,
       userId: result.data.userId
+      expiresTime: result.data.expiresTime
     });
 
     // 登录成功后启动Token自动刷新定时器

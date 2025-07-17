@@ -3,9 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { initializeAuth, getAccessToken, getUserProfile } from './services/auth';
 import { getUserProfile as getUserProfileFromService } from './services/user';
 import { ErrorBoundary } from './components/Debug/ErrorBoundary';
-import { LoadingDiagnostics } from './components/Debug/LoadingDiagnostics';
+import { LoadingDiagnostics } from './components/Debug/LoadingDiagnostics'; 
 import { runPageDiagnostics } from './utils/diagnostics';
-import { tokenEvents } from './services/tokenRefresh';
+import { tokenEvents, TokenEventType } from './services/tokenRefresh';
 import LoginPage from './components/Auth/LoginPage';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
@@ -118,19 +118,20 @@ function App() {
   // 监听Token刷新失败事件
   useEffect(() => {
     const handleTokenRefreshFailed = () => {
-      console.warn('⚠️ Token刷新连续失败，自动登出');
-      handleLogout();
+      console.warn('⚠️ Token刷新连续失败，准备自动登出');
+      // 显示友好提示
+      alert('您的登录状态已失效，请重新登录');
+      // 执行登出
+      setTimeout(() => {
+        handleLogout();
+      }, 500);
     };
 
     // 使用标准化的事件对象
-    window.addEventListener('tokenRefreshFailed', () => {
-      handleTokenRefreshFailed();
-    });
+    window.addEventListener(TokenEventType.REFRESH_FAILED, handleTokenRefreshFailed);
     
     return () => {
-      window.removeEventListener('tokenRefreshFailed', () => {
-        handleTokenRefreshFailed();
-      });
+      window.removeEventListener(TokenEventType.REFRESH_FAILED, handleTokenRefreshFailed);
     };
   }, []);
   
@@ -138,17 +139,27 @@ function App() {
   useEffect(() => {
     const handleTokenRefreshed = () => {
       console.log('✅ Token刷新成功，应用已更新认证状态');
-      // 可以在这里执行一些需要在token刷新后进行的操作
+      // 可以在这里添加一些UI反馈，如显示一个小提示
     };
     
-    window.addEventListener('tokenRefreshed', () => {
-      handleTokenRefreshed();
-    });
+    window.addEventListener(TokenEventType.REFRESHED, handleTokenRefreshed);
     
     return () => {
-      window.removeEventListener('tokenRefreshed', () => {
-        handleTokenRefreshed();
-      });
+      window.removeEventListener(TokenEventType.REFRESHED, handleTokenRefreshed);
+    };
+  }, []);
+  
+  // 监听token即将过期事件
+  useEffect(() => {
+    const handleTokenExpiring = () => {
+      console.log('⚠️ Token即将过期，准备刷新');
+      // 这里可以添加UI提示，如果需要的话
+    };
+    
+    window.addEventListener(TokenEventType.REFRESH_NEEDED, handleTokenExpiring);
+    
+    return () => {
+      window.removeEventListener(TokenEventType.REFRESH_NEEDED, handleTokenExpiring);
     };
   }, []);
 
@@ -156,15 +167,28 @@ function App() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isLoggedIn) {
-        console.log('📱 页面重新可见，检查认证状态');
-        // 页面重新可见时，可以选择性地检查Token状态
+        console.log('📱 页面重新可见，检查Token状态');
+        
+        // 导入tokenRefreshManager
+        import('./services/tokenRefresh').then(({ tokenRefreshManager }) => {
+          // 获取token状态
+          const tokenStatus = tokenRefreshManager.getTokenStatus();
+          
+          // 如果token即将过期（小于5分钟），主动刷新
+          if (tokenStatus.expiresIn < 5 * 60 * 1000) {
+            console.log('⚠️ 检测到Token即将过期，主动刷新');
+            tokenRefreshManager.manualRefresh();
+          } else {
+            console.log('✅ Token状态正常，剩余时间:', Math.round(tokenStatus.expiresIn / 60000), '分钟');
+          }
+        });
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange); 
     };
   }, [isLoggedIn]);
 

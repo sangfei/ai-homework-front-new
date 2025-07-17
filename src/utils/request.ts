@@ -1,5 +1,5 @@
 import { getAccessToken, getTenantId, clearAccessToken } from '../services/auth';
-import { tokenEvents } from '../services/tokenRefresh';
+import { tokenEvents, TokenEventType } from '../services/tokenRefresh';
 
 // 请求拦截器 - 自动添加认证头
 const createAuthenticatedRequest = (url: string, options: RequestInit = {}): RequestInit => {
@@ -49,12 +49,19 @@ let pendingRequests: Array<() => Promise<Response>> = [];
 let isRefreshing = false;
 
 // 监听token刷新事件
-window.addEventListener('tokenRefreshed', () => {
+window.addEventListener(TokenEventType.REFRESHED, () => {
   console.log('🔄 检测到token已刷新，重试所有等待的请求');
   // 重试所有等待的请求
   const requests = [...pendingRequests];
   pendingRequests = [];
   requests.forEach(callback => callback());
+});
+
+// 监听token过期事件
+window.addEventListener(TokenEventType.EXPIRED, () => {
+  console.warn('⚠️ Token已过期，清理请求队列');
+  pendingRequests = [];
+  // 可以在这里添加其他处理逻辑，如显示提示或重定向
 });
 
 // 通用的fetch包装器，自动处理认证
@@ -101,7 +108,7 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
         
         try {
           // 导入tokenRefreshManager (使用动态导入避免循环依赖)
-          const { tokenRefreshManager } = await import('../services/tokenRefresh');
+          const { tokenRefreshManager } = await import('../services/tokenRefresh'); 
           
           // 尝试刷新token
           const refreshed = await tokenRefreshManager.manualRefresh();
@@ -129,9 +136,26 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
       return response;
     } catch (error) {
       console.error('🚨 请求失败:', {
-        url,
-        error: error instanceof Error ? error.message : error
-      });
+      console.warn(`${logPrefix} 🔒 检测到后端认证失败，尝试刷新token`);
+      
+      try {
+        // 导入tokenRefreshManager (使用动态导入避免循环依赖)
+        const { tokenRefreshManager } = await import('../services/tokenRefresh');
+        
+        // 尝试刷新token
+        const refreshed = await tokenRefreshManager.manualRefresh();
+        
+        if (!refreshed) {
+          console.error(`${logPrefix} ❌ Token刷新失败，清除token并跳转登录页`);
+          clearAccessToken();
+          window.location.href = '/login';
+        }
+      } catch (refreshError) {
+        console.error(`${logPrefix} ❌ Token刷新过程出错:`, refreshError);
+        clearAccessToken();
+        window.location.href = '/login';
+      }
+      
       throw error;
     }
   };
@@ -179,4 +203,46 @@ export const handleApiResponse = async <T>(response: Response, context?: string)
   
   console.log(`${logPrefix} ✅ API响应处理成功`);
   return result.data;
+};
+
+// 添加请求重试机制
+export const retryRequest = async <T>(
+  requestFn: () => Promise<T>,
+  maxRetries: number = 3,
+  retryDelay: number = 1000
+): Promise<T> => {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      lastError = error;
+      
+      // 如果是认证错误，尝试刷新token后再重试
+      if (error instanceof Error && error.message.includes('账号未登录')) {
+        try {
+          const { tokenRefreshManager } = await import('../services/tokenRefresh');
+          const refreshed = await tokenRefreshManager.manualRefresh();
+          
+          if (refreshed) {
+            console.log(`🔄 Token刷新成功，重试请求 (尝试 ${attempt + 1}/${maxRetries + 1})`);
+            continue;
+          }
+        } catch (refreshError) {
+          console.error('❌ Token刷新失败:', refreshError);
+        }
+      }
+      
+      // 如果不是最后一次尝试，等待后重试
+      if (attempt < maxRetries) {
+        console.log(`⏳ 请求失败，${retryDelay / 1000}秒后重试 (尝试 ${attempt + 1}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        // 每次重试增加延迟
+        retryDelay *= 1.5;
+      }
+    }
+  }
+  
+  throw lastError;
 };
