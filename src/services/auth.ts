@@ -282,7 +282,7 @@ const performLogin = async (
     setAuthData({
       accessToken: result.data.accessToken,
       refreshToken: result.data.refreshToken,
-      userId: result.data.userId
+      userId: result.data.userId,
       expiresTime: result.data.expiresTime
     });
 
