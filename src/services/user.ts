@@ -52,6 +52,10 @@ export const getUserProfile = async (): Promise<UserProfile> => {
     if (!userData) {
       throw new Error('用户信息数据为空');
     }
+
+    // 保存用户信息到全局变量和存储
+    setUserProfile(userData);
+    return userData;
   } catch (error) {
     console.error('获取用户信息失败:', error);
     if (error instanceof Error) {
@@ -61,8 +65,6 @@ export const getUserProfile = async (): Promise<UserProfile> => {
   }
 };
 
-    // 保存用户信息到全局变量和存储
-    setUserProfile(userData);
 /**
  * 格式化用户信息用于显示
  */
@@ -73,7 +75,6 @@ export const formatUserForDisplay = (profile: UserProfile) => {
     role: profile.dept?.className || '教师',
     avatar: profile.avatar || '', // 如果为空会使用默认头像
     email: profile.email,
-    return userData;
     mobile: profile.mobile,
     department: profile.dept?.name,
     className: profile.dept?.className,
