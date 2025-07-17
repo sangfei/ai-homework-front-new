@@ -164,6 +164,14 @@ export const handleApiResponse = async <T>(response: Response, context?: string)
     throw new Error('服务器响应格式错误');
   }
   
+  // 检查后端返回的认证错误
+  if (result.msg === '账号未登录') {
+    console.warn(`${logPrefix} 🔒 检测到后端认证失败，清除token并跳转登录页`);
+    clearAccessToken();
+    window.location.href = '/login';
+    throw new Error('账号未登录，请重新登录');
+  }
+  
   if (result.code !== 0) {
     console.error(`${logPrefix} ❌ 业务逻辑错误:`, result);
     throw new Error(result.msg || '请求失败');
