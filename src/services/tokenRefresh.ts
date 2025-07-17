@@ -162,7 +162,6 @@ export class TokenRefreshManager {
     })();
     
     return this.refreshPromise;
-    }
   }
 
   /**
