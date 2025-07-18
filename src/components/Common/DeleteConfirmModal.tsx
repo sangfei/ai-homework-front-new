@@ -49,8 +49,8 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 
   // 处理确认删除
   const handleConfirm = () => {
+    console.log('🗑️ 用户确认删除操作');
     onConfirm();
-    onClose();
   };
 
   if (!isOpen) return null;

@@ -71,10 +71,15 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
 
   const handleEdit = () => {
     console.log('🔧 点击编辑按钮，作业ID:', homework.id);
+    console.log('🗑️ 点击删除按钮，作业ID:', homework.id);
     if (onEdit) {
       onEdit(homework.id);
     } else {
-      navigate(`/homework/edit/${homework.id}`);
+      // 如果没有传入删除回调，显示确认对话框
+      if (window.confirm('确定要删除这个作业吗？删除后无法恢复。')) {
+        // 这里可以调用删除API或触发删除事件
+        console.log('用户确认删除作业:', homework.id);
+      }
     }
   };
 

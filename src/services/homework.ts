@@ -243,27 +243,26 @@ export const updateHomeworkDetail = async (homeworkDetail: any): Promise<any> =>
 /**
  * 删除作业
  */
-export const deleteHomework = async (id: string): Promise<any> => {
+export const deleteHomework = async (id: string | number): Promise<any> => {
   try {
+    console.log('🗑️ 开始删除作业，ID:', id);
+    
     const response = await authenticatedFetch(
-      `${buildApiUrl(`/admin-api/homework/homework-tasks/${id}`)}`,
+      `${buildApiUrl('/admin-api/homework/homework-tasks/delete')}?id=${id}`,
       {
         method: 'DELETE',
         headers: {
-          'Accept': 'application/json',
+          'Accept': '*/*',
+          'Content-Type': 'application/x-www-form-urlencoded',
         }
       }
     );
 
-    const result = await response.json();
-    
-    if (result.code !== 0) {
-      throw new Error(result.msg || '删除作业失败');
-    }
-
-    return result.data;
+    const result = await handleApiResponse<any>(response);
+    console.log('✅ 作业删除成功');
+    return result;
   } catch (error) {
-    console.error('删除作业失败:', error);
+    console.error('❌ 删除作业失败:', error);
     throw error;
   }
 };

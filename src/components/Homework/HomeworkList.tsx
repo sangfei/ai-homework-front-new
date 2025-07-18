@@ -98,13 +98,35 @@ const HomeworkList: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (homeworkToDelete) {
       try {
+        console.log('🗑️ 确认删除作业，ID:', homeworkToDelete);
         await deleteHomework(homeworkToDelete);
+        setShowDeleteModal(false);
         setHomeworkToDelete(null);
         refetch(filters); // 重新获取数据
-        alert('作业删除成功！');
+        
+        // 显示成功提示
+        const successMessage = '作业删除成功！';
+        console.log('✅', successMessage);
+        
+        // 可以使用toast通知替代alert
+        if (window.confirm) {
+          setTimeout(() => {
+            alert(successMessage);
+          }, 100);
+        }
       } catch (error) {
         console.error('删除作业失败:', error);
-        alert('删除作业失败，请稍后重试');
+        
+        // 显示错误提示
+        const errorMessage = error instanceof Error ? error.message : '删除作业失败，请稍后重试';
+        console.error('❌', errorMessage);
+        
+        setTimeout(() => {
+          alert(errorMessage);
+        }, 100);
+      } finally {
+        setShowDeleteModal(false);
+        setHomeworkToDelete(null);
       }
     }
   };
