@@ -257,27 +257,13 @@ const EditHomework: React.FC = () => {
       
       console.log(`📂 处理任务 ${taskId} 的 ${type} 文件 (${files.length}个)`);
       
+      const uploadedUrls: string[] = [];
+      
       for (const file of files) {
         try {
           const fileUrl = await uploadSingleFile(file, taskId, uploadType);
-          
-          // 将上传成功的URL添加到对应的数据结构中
-          setHomework(prev => ({
-            ...prev,
-            taskList: prev.taskList.map(task =>
-              task.id === taskId 
-                ? { 
-                    ...task, 
-                    [type === 'question' ? 'taskQuestion' : 'taskAnswer']: [
-                      ...(type === 'question' ? task.taskQuestion : task.taskAnswer),
-                      fileUrl
-                    ]
-                  }
-                : task
-            )
-          }));
-          
-          console.log(`✅ 文件已添加到数据结构: ${file.name} -> ${fileUrl}`);
+          uploadedUrls.push(fileUrl);
+          console.log(`✅ 文件上传成功: ${file.name} -> ${fileUrl}`);
           
           // 添加延迟避免服务器压力
           await new Promise(resolve => setTimeout(resolve, 200));
@@ -286,6 +272,26 @@ const EditHomework: React.FC = () => {
           console.error(`❌ 上传失败: ${file.name}`, error);
           throw error;
         }
+      }
+      
+      // 批量将上传成功的URL添加到对应的数据结构中
+      if (uploadedUrls.length > 0) {
+        setHomework(prev => ({
+          ...prev,
+          taskList: prev.taskList.map(task =>
+            task.id === taskId 
+              ? { 
+                  ...task, 
+                  [type === 'question' ? 'taskQuestion' : 'taskAnswer']: [
+                    ...(type === 'question' ? task.taskQuestion : task.taskAnswer),
+                    ...uploadedUrls
+                  ]
+                }
+              : task
+          )
+        }));
+        
+        console.log(`✅ 任务 ${taskId} 的 ${uploadedUrls.length} 个 ${type} 图片URL已添加到数据结构`);
       }
     }
     
@@ -482,47 +488,65 @@ const EditHomework: React.FC = () => {
       // 第一步：上传所有待处理的文件
       if (pendingUploads.length > 0) {
         console.log('📁 先上传待处理的文件...');
+        console.log('📋 待上传文件详情:', pendingUploads.map(p => ({
+          taskId: p.taskId,
+          type: p.type,
+          fileCount: p.files.length,
+          fileNames: p.files.map(f => f.name)
+        })));
+        
         await uploadPendingFiles();
         console.log('✅ 所有文件上传完成');
+        
+        // 等待状态更新完成
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
       
-      // 第二步：准备提交数据
-      const updateData = {
-        ...homework,
-        taskList: homework.taskList
-          .filter(task => task.taskTitle.trim()) // 过滤掉空任务
-          .map(task => ({
-            id: task.id,
-            taskTitle: task.taskTitle.trim(),
-            taskDescription: task.taskDescription.trim(),
-            taskQuestion: task.taskQuestion,
-            taskAnswer: task.taskAnswer
-          }))
-      };
+      // 第二步：准备提交数据（使用最新的homework状态）
+      setHomework(currentHomework => {
+        const updateData = {
+          ...currentHomework,
+          taskList: currentHomework.taskList
+            .filter(task => task.taskTitle.trim()) // 过滤掉空任务
+            .map(task => ({
+              id: task.id,
+              taskTitle: task.taskTitle.trim(),
+              taskDescription: task.taskDescription.trim(),
+              taskQuestion: task.taskQuestion,
+              taskAnswer: task.taskAnswer
+            }))
+        };
 
-      // 数据验证日志
-      console.log('📋 最终提交数据验证:');
-      updateData.taskList.forEach(task => {
-        console.log(`📊 任务 ${task.id} 数据统计:`, {
-          title: task.taskTitle,
-          questionCount: task.taskQuestion.length,
-          answerCount: task.taskAnswer.length,
-          questionUrls: task.taskQuestion,
-          answerUrls: task.taskAnswer
+        // 数据验证日志
+        console.log('📋 最终提交数据验证:');
+        updateData.taskList.forEach(task => {
+          console.log(`📊 任务 ${task.id} 数据统计:`, {
+            title: task.taskTitle,
+            questionCount: task.taskQuestion.length,
+            answerCount: task.taskAnswer.length,
+            questionUrls: task.taskQuestion,
+            answerUrls: task.taskAnswer
+          });
         });
+        
+        // 第三步：发送更新请求
+        console.log('💾 发送作业更新请求...');
+        updateHomeworkDetail(updateData).then(() => {
+          success('作业更新成功！');
+          navigate('/homework');
+        }).catch(error => {
+          console.error('❌ 更新作业失败:', error);
+          showError(`更新作业失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }).finally(() => {
+          setIsSubmitting(false);
+        });
+        
+        return currentHomework; // 返回当前状态，不修改
       });
-      
-      // 第三步：发送更新请求
-      console.log('💾 发送作业更新请求...');
-      await updateHomeworkDetail(updateData);
-      
-      success('作业更新成功！');
-      navigate('/homework');
       
     } catch (error) {
       console.error('❌ 更新作业失败:', error);
       showError(`更新作业失败: ${error instanceof Error ? error.message : '未知错误'}`);
-    } finally {
       setIsSubmitting(false);
     }
   };
