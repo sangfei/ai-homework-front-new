@@ -5,6 +5,10 @@ import { DateUtils } from '../../utils/dateUtils';
 import ClassSelect from '../Common/ClassSelect';
 import ImageUpload from '../Common/ImageUpload';
 import { getHomeworkDetail, updateHomeworkDetail } from '../../services/homework';
+import { uploadHomeworkAttachment } from '../../services/fileUpload';
+import { getTenantId, getUserProfile as getStoredUserProfile } from '../../services/auth';
+import { getUserProfile, formatUserForDisplay } from '../../services/user';
+import { getClassById } from '../../services/classes';
 import { useToast } from '../Common/Toast';
 
 interface Task {
@@ -13,6 +17,12 @@ interface Task {
   taskDescription: string;
   taskQuestion: string[];
   taskAnswer: string[];
+}
+
+interface PendingUpload {
+  taskId: string;
+  type: 'question' | 'answer';
+  files: File[];
 }
 
 interface HomeworkData {
@@ -26,6 +36,30 @@ interface HomeworkData {
   taskList: Task[];
 }
 
+// 图片URL处理函数
+const processImageUrl = (url: string): string => {
+  if (!url) return '';
+  
+  // 如果已经是完整的URL，直接返回
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // 如果是相对路径或域名，添加https://前缀
+  if (url.startsWith('//')) {
+    return `https:${url}`;
+  }
+  
+  // 其他情况，添加https://前缀
+  return `https://${url}`;
+};
+
+// 批量处理图片URL
+const processImageUrls = (urls: string[]): string[] => {
+  if (!Array.isArray(urls)) return [];
+  return urls.map(processImageUrl).filter(url => url.length > 0);
+};
+
 const EditHomework: React.FC = () => {
   const navigate = useNavigate();
   const { homeworkId } = useParams<{ homeworkId: string }>();
@@ -36,6 +70,9 @@ const EditHomework: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dataLoaded, setDataLoaded] = useState(false);
   
+  // 待上传文件管理
+  const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
+  
   // 图片预览相关状态
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -43,9 +80,6 @@ const EditHomework: React.FC = () => {
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   
-  // 新上传图片管理状态
-  const [newUploadedImages, setNewUploadedImages] = useState<Map<string, string[]>>(new Map());
-
   const [homework, setHomework] = useState<HomeworkData>({
     id: 0,
     title: '',
@@ -93,9 +127,458 @@ const EditHomework: React.FC = () => {
           id: task.id?.toString() || Date.now().toString(),
           taskTitle: task.taskTitle || '',
           taskDescription: task.taskDescription || '',
-          // 只保留真实的URL，过滤掉示例数据
-          taskQuestion: Array.isArray(task.taskQuestion) 
-            ? task.taskQuestion.filter((url: string) => url && !url.includes('example.com'))
+          // 处理图片URL，添加https://前缀并过滤示例数据
+          taskQuestion: processImageUrls(
+            Array.isArray(task.taskQuestion) 
+              ? task.taskQuestion.filter((url: string) => url && !url.includes('example.com'))
+              : []
+          ),
+          taskAnswer: processImageUrls(
+            Array.isArray(task.taskAnswer) 
+              ? task.taskAnswer.filter((url: string) => url && !url.includes('example.com'))
+              : []
+          )
+        }));
+
+        // 如果没有任务，创建一个默认任务
+        if (formattedTasks.length === 0) {
+          formattedTasks.push({
+            id: '1',
+            taskTitle: '',
+            taskDescription: '',
+            taskQuestion: [],
+            taskAnswer: []
+          });
+        }
+
+        setHomework({
+          id: homeworkDetail.id,
+          title: homeworkDetail.title || '',
+          deptId: homeworkDetail.deptId || 0,
+          subject: homeworkDetail.subject || '',
+          assignedDate: homeworkDetail.assignedDate || Date.now(),
+          publishTime: homeworkDetail.publishTime || Date.now(),
+          ddlTime: homeworkDetail.ddlTime || Date.now() + 24 * 60 * 60 * 1000,
+          taskList: formattedTasks
+        });
+
+        setDataLoaded(true);
+        console.log('✅ 作业数据加载完成');
+      } catch (error) {
+        console.error('❌ 加载作业数据失败:', error);
+        showError('加载作业数据失败');
+        navigate('/homework');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!homeworkId) {
+      showError('作业ID无效');
+      navigate('/homework');
+      return;
+    }
+
+    loadHomeworkData();
+  }, [homeworkId]); // 移除navigate和showError依赖，避免循环
+
+  // 构建文件上传参数
+  const buildUploadParams = async (file: File, taskId: string, type: 1 | 2) => {
+    const tenantId = getTenantId();
+    const storedProfile = getStoredUserProfile();
+    
+    if (!tenantId) {
+      throw new Error('缺少租户ID，请重新登录');
+    }
+    
+    // 获取用户ID
+    const userId = storedProfile?.id?.toString() || '144';
+    
+    // 获取班级名称
+    let className = '未知班级';
+    if (homework.deptId) {
+      try {
+        const classInfo = await getClassById(homework.deptId);
+        className = classInfo?.className || `班级ID-${homework.deptId}`;
+      } catch (error) {
+        console.warn('⚠️ 获取班级名称失败，使用备用方案:', error);
+        className = storedProfile?.dept?.className || `班级ID-${homework.deptId}`;
+      }
+    }
+    
+    // 格式化作业日期
+    const assignedDate = DateUtils.timestampToDateString(homework.assignedDate);
+    
+    return {
+      type,
+      tenantId,
+      className,
+      userId,
+      subject: homework.subject,
+      assignedDate,
+      homeworkId: homework.id,
+      taskId: parseInt(taskId),
+      file
+    };
+  };
+
+  // 上传单个文件
+  const uploadSingleFile = async (file: File, taskId: string, type: 1 | 2): Promise<string> => {
+    try {
+      const uploadParams = await buildUploadParams(file, taskId, type);
+      console.log('📤 开始上传文件:', {
+        fileName: file.name,
+        taskId,
+        type: type === 1 ? '问题图片' : '答案图片'
+      });
+      
+      const fileUrl = await uploadHomeworkAttachment(uploadParams);
+      console.log('✅ 文件上传成功:', { fileName: file.name, fileUrl });
+      
+      return fileUrl;
+    } catch (error) {
+      console.error('❌ 文件上传失败:', error);
+      throw new Error(`文件 "${file.name}" 上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  };
+
+  // 批量上传待处理的文件
+  const uploadPendingFiles = async (): Promise<void> => {
+    if (pendingUploads.length === 0) {
+      console.log('ℹ️ 没有待上传的文件');
+      return;
+    }
+
+    console.log(`📁 开始上传 ${pendingUploads.length} 组待处理文件`);
+    
+    for (const pending of pendingUploads) {
+      const { taskId, type, files } = pending;
+      const uploadType = type === 'question' ? 1 : 2;
+      
+      console.log(`📂 处理任务 ${taskId} 的 ${type} 文件 (${files.length}个)`);
+      
+      for (const file of files) {
+        try {
+          const fileUrl = await uploadSingleFile(file, taskId, uploadType);
+          
+          // 将上传成功的URL添加到对应的数据结构中
+          setHomework(prev => ({
+            ...prev,
+            taskList: prev.taskList.map(task =>
+              task.id === taskId 
+                ? { 
+                    ...task, 
+                    [type === 'question' ? 'taskQuestion' : 'taskAnswer']: [
+                      ...(type === 'question' ? task.taskQuestion : task.taskAnswer),
+                      fileUrl
+                    ]
+                  }
+                : task
+            )
+          }));
+          
+          console.log(`✅ 文件已添加到数据结构: ${file.name} -> ${fileUrl}`);
+          
+          // 添加延迟避免服务器压力
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+        } catch (error) {
+          console.error(`❌ 上传失败: ${file.name}`, error);
+          throw error;
+        }
+      }
+    }
+    
+    // 清空待上传列表
+    setPendingUploads([]);
+    console.log('✅ 所有待上传文件处理完成');
+  };
+
+  // 时间戳转换为datetime-local格式
+  const timestampToDateTime = (timestamp: number): string => {
+    return DateUtils.toDateTimeLocal(new Date(timestamp));
+  };
+
+  // datetime-local格式转换为时间戳
+  const dateTimeToTimestamp = (dateTimeString: string): number => {
+    return DateUtils.fromDateTimeLocal(dateTimeString);
+  };
+
+  // 处理基本信息变化
+  const handleBasicInfoChange = (field: keyof HomeworkData, value: any) => {
+    setHomework(prev => ({ ...prev, [field]: value }));
+    // 清除相关错误
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // 处理任务变化
+  const handleTaskChange = (taskId: string, field: keyof Task, value: any) => {
+    setHomework(prev => ({
+      ...prev,
+      taskList: prev.taskList.map(task =>
+        task.id === taskId ? { ...task, [field]: value } : task
+      )
+    }));
+    
+    // 清除相关错误
+    const errorKey = `task_${taskId}_${field}`;
+    if (errors[errorKey]) {
+      setErrors(prev => ({ ...prev, [errorKey]: '' }));
+    }
+  };
+
+  // 添加任务
+  const addTask = () => {
+    const newTask: Task = {
+      id: Date.now().toString(),
+      taskTitle: '',
+      taskDescription: '',
+      taskQuestion: [],
+      taskAnswer: []
+    };
+    
+    setHomework(prev => ({
+      ...prev,
+      taskList: [...prev.taskList, newTask]
+    }));
+  };
+
+  // 删除任务
+  const removeTask = (taskId: string) => {
+    if (homework.taskList.length > 1) {
+      setHomework(prev => ({
+        ...prev,
+        taskList: prev.taskList.filter(task => task.id !== taskId)
+      }));
+      
+      // 同时清理待上传列表中的相关文件
+      setPendingUploads(prev => prev.filter(pending => pending.taskId !== taskId));
+    }
+  };
+
+  // 处理任务问题图片变化（新上传）
+  const handleQuestionImagesChange = useCallback((taskId: string, uploadedImages: any[]) => {
+    console.log('📸 任务问题图片变化:', { taskId, imagesCount: uploadedImages.length });
+    
+    // 提取新上传的文件（状态为success且有file对象的）
+    const newFiles = uploadedImages
+      .filter(img => img.status === 'success' && img.file)
+      .map(img => img.file);
+    
+    if (newFiles.length > 0) {
+      console.log('📁 添加到待上传列表:', { taskId, filesCount: newFiles.length });
+      
+      // 添加到待上传列表，而不是立即上传
+      setPendingUploads(prev => {
+        const filtered = prev.filter(p => !(p.taskId === taskId && p.type === 'question'));
+        return [...filtered, { taskId, type: 'question', files: newFiles }];
+      });
+    }
+  }, []);
+
+  // 处理任务答案图片变化（新上传）
+  const handleAnswerImagesChange = useCallback((taskId: string, uploadedImages: any[]) => {
+    console.log('📸 任务答案图片变化:', { taskId, imagesCount: uploadedImages.length });
+    
+    // 提取新上传的文件（状态为success且有file对象的）
+    const newFiles = uploadedImages
+      .filter(img => img.status === 'success' && img.file)
+      .map(img => img.file);
+    
+    if (newFiles.length > 0) {
+      console.log('📁 添加到待上传列表:', { taskId, filesCount: newFiles.length });
+      
+      // 添加到待上传列表，而不是立即上传
+      setPendingUploads(prev => {
+        const filtered = prev.filter(p => !(p.taskId === taskId && p.type === 'answer'));
+        return [...filtered, { taskId, type: 'answer', files: newFiles }];
+      });
+    }
+  }, []);
+
+  // 删除现有问题图片
+  const handleDeleteExistingQuestionImage = useCallback((taskId: string, imageIndex: number) => {
+    console.log('🗑️ 删除现有问题图片:', { taskId, imageIndex });
+    
+    setHomework(prev => ({
+      ...prev,
+      taskList: prev.taskList.map(task =>
+        task.id === taskId 
+          ? { ...task, taskQuestion: task.taskQuestion.filter((_, index) => index !== imageIndex) }
+          : task
+      )
+    }));
+  }, []);
+
+  // 删除现有答案图片
+  const handleDeleteExistingAnswerImage = useCallback((taskId: string, imageIndex: number) => {
+    console.log('🗑️ 删除现有答案图片:', { taskId, imageIndex });
+    
+    setHomework(prev => ({
+      ...prev,
+      taskList: prev.taskList.map(task =>
+        task.id === taskId 
+          ? { ...task, taskAnswer: task.taskAnswer.filter((_, index) => index !== imageIndex) }
+          : task
+      )
+    }));
+  }, []);
+  
+  // 表单验证
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    // 验证基本信息
+    if (!homework.title.trim()) {
+      newErrors.title = '请输入作业标题';
+    }
+    
+    if (!homework.deptId) {
+      newErrors.deptId = '请选择班级';
+    }
+    
+    if (!homework.subject) {
+      newErrors.subject = '请选择科目';
+    }
+
+    // 验证时间逻辑
+    if (homework.ddlTime <= homework.publishTime) {
+      newErrors.ddlTime = '截止时间必须晚于发布时间';
+    }
+
+    // 验证任务
+    const hasValidTask = homework.taskList.some(task => task.taskTitle.trim());
+    if (!hasValidTask) {
+      newErrors.tasks = '至少需要一个有效的任务';
+    }
+
+    // 验证每个任务的必填字段
+    homework.taskList.forEach((task) => {
+      if (task.taskTitle.trim()) {
+        if (!task.taskDescription.trim()) {
+          newErrors[`task_${task.id}_description`] = '任务描述为必填项';
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // 提交表单
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      showError('请检查表单填写是否完整');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      console.log('📤 开始提交作业更新...');
+      
+      // 第一步：上传所有待处理的文件
+      if (pendingUploads.length > 0) {
+        console.log('📁 先上传待处理的文件...');
+        await uploadPendingFiles();
+        console.log('✅ 所有文件上传完成');
+      }
+      
+      // 第二步：准备提交数据
+      const updateData = {
+        ...homework,
+        taskList: homework.taskList
+          .filter(task => task.taskTitle.trim()) // 过滤掉空任务
+          .map(task => ({
+            id: task.id,
+            taskTitle: task.taskTitle.trim(),
+            taskDescription: task.taskDescription.trim(),
+            taskQuestion: task.taskQuestion,
+            taskAnswer: task.taskAnswer
+          }))
+      };
+
+      // 数据验证日志
+      console.log('📋 最终提交数据验证:');
+      updateData.taskList.forEach(task => {
+        console.log(`📊 任务 ${task.id} 数据统计:`, {
+          title: task.taskTitle,
+          questionCount: task.taskQuestion.length,
+          answerCount: task.taskAnswer.length,
+          questionUrls: task.taskQuestion,
+          answerUrls: task.taskAnswer
+        });
+      });
+      
+      // 第三步：发送更新请求
+      console.log('💾 发送作业更新请求...');
+      await updateHomeworkDetail(updateData);
+      
+      success('作业更新成功！');
+      navigate('/homework');
+      
+    } catch (error) {
+      console.error('❌ 更新作业失败:', error);
+      showError(`更新作业失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 取消编辑
+  const handleCancel = () => {
+    navigate('/homework');
+  };
+
+  const handlePreview = (imageUrl: string) => {
+    setPreviewImage(imageUrl);
+    setPosition({ x: 0, y: 0 });
+    setScale(1);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewImage(null);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLImageElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    setStartPosition({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLImageElement>) => {
+    if (isDragging) {
+      setPosition({ x: e.clientX - startPosition.x, y: e.clientY - startPosition.y });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLImageElement>) => {
+    e.preventDefault();
+    const newScale = scale - e.deltaY * 0.01;
+    setScale(Math.min(Math.max(0.1, newScale), 5));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">加载作业数据中...</p>
+        </div>
+      </div>
+    );
+  };
             : [],
           taskAnswer: Array.isArray(task.taskAnswer) 
             ? task.taskAnswer.filter((url: string) => url && !url.includes('example.com'))
@@ -700,6 +1183,7 @@ const EditHomework: React.FC = () => {
                     <li>• 支持 JPG、PNG、GIF、WebP 格式，单张图片不超过5MB</li>
                     <li>• 请确保时间设置合理，截止时间应晚于发布时间</li>
                     <li>• 至少需要保留一个有效的任务</li>
+                    <li>• 新上传的图片将在保存时自动上传到服务器</li>
                   </ul>
                 </div>
               </div>
@@ -708,6 +1192,12 @@ const EditHomework: React.FC = () => {
 
           {/* 底部操作按钮 */}
           <div className="flex justify-end space-x-4">
+            {pendingUploads.length > 0 && (
+              <div className="flex items-center space-x-2 text-sm text-orange-600">
+                <Upload className="w-4 h-4" />
+                <span>有 {pendingUploads.reduce((sum, p) => sum + p.files.length, 0)} 个文件待上传</span>
+              </div>
+            )}
             <button
               onClick={handleCancel}
               disabled={isSubmitting}
@@ -723,7 +1213,12 @@ const EditHomework: React.FC = () => {
               {isSubmitting && (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               )}
-              <span>{isSubmitting ? '保存中...' : '保存修改'}</span>
+              <span>
+                {isSubmitting 
+                  ? (pendingUploads.length > 0 ? '上传并保存中...' : '保存中...') 
+                  : '保存修改'
+                }
+              </span>
             </button>
           </div>
         </div>
