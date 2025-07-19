@@ -1,3 +1,5 @@
+import { getUserProfile } from '../services/auth';
+
 // 作业提交完整流程处理
 
 import { executeHomeworkCreationFlow } from './homeworkFlow';

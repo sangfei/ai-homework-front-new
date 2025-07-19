@@ -1,5 +1,5 @@
 import { authenticatedFetch, handleApiResponse } from '../utils/request';
-import { getTenantId, getUserProfile } from './auth';
+import { getTenantId, getUserProfile as getStoredUserProfile } from './auth';
 import { getUserProfile as getUserProfileFromService } from './user';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
@@ -32,7 +32,7 @@ interface FileUploadResponse {
  */
 const getCurrentUserId = (): string => {
   // 优先从存储的用户信息中获取
-  const storedProfile = getUserProfile();
+  const storedProfile = getStoredUserProfile();
   if (storedProfile && storedProfile.id) {
     return storedProfile.id.toString();
   }
