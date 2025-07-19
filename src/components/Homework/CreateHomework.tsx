@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X, Plus, Upload, Trash2, Info, Calendar, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DateUtils } from '../../utils/dateUtils';
 import ClassSelect from '../Common/ClassSelect';
 import FileUpload from '../Common/FileUpload';
 import { useClassSelectOptions } from '../../hooks/useClasses';
@@ -46,20 +47,19 @@ const CreateHomework: React.FC = () => {
 
   // 获取默认时间
   const getDefaultTimes = () => {
-    const now = new Date();
+    // 使用东八区时间
+    const now = DateUtils.getChinaTime();
     
-    // 设置作业日期为当天的上午8点整
-    const assignedDate = new Date(now);
-    assignedDate.setHours(8, 0, 0, 0);
+    // 设置作业日期为当天的0点0分（东八区）
+    const assignedDate = DateUtils.getTodayStart();
     
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0); // 明天上午9:00
+    // 设置截止时间为明天上午9:00（东八区）
+    const ddlTime = DateUtils.getTomorrowNineAM();
 
     return {
-      assignedDate: assignedDate.toISOString().slice(0, 16), // YYYY-MM-DDTHH:mm
-      publishTime: now.toISOString().slice(0, 16),
-      ddlTime: tomorrow.toISOString().slice(0, 16)
+      assignedDate: DateUtils.toDateTimeLocal(assignedDate),
+      publishTime: DateUtils.toDateTimeLocal(now),
+      ddlTime: DateUtils.toDateTimeLocal(ddlTime)
     };
   };
 
@@ -233,7 +233,7 @@ const CreateHomework: React.FC = () => {
 
   // 将日期时间字符串转换为时间戳
   const dateTimeToTimestamp = (dateTimeString: string): number => {
-    return new Date(dateTimeString).getTime();
+    return DateUtils.fromDateTimeLocal(dateTimeString);
   };
 
   // 处理表单提交
@@ -455,14 +455,14 @@ const CreateHomework: React.FC = () => {
                   type="datetime-local"
                   value={formData.assignedDate}
                   onChange={(e) => {
-                    // 获取用户选择的日期部分
-                    const selectedDate = new Date(e.target.value);
-                    // 重置为上午8点整
-                    selectedDate.setHours(8, 0, 0, 0);
-                    // 更新表单数据
+                    // 获取用户选择的日期，设置为0点0分（东八区）
+                    const selectedTimestamp = DateUtils.fromDateTimeLocal(e.target.value);
+                    const selectedDate = new Date(selectedTimestamp);
+                    const dateStart = DateUtils.getChinaDateStart(selectedDate);
+                    
                     setFormData({ 
                       ...formData, 
-                      assignedDate: selectedDate.toISOString().slice(0, 16) 
+                      assignedDate: DateUtils.toDateTimeLocal(dateStart)
                     });
                   }}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -472,7 +472,7 @@ const CreateHomework: React.FC = () => {
                 {errors.assignedDate && (
                   <p className="mt-1 text-sm text-red-600">{errors.assignedDate}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">默认为当天上午8:00</p>
+                <p className="mt-1 text-xs text-gray-500">默认为当天00:00（东八区时间）</p>
               </div>
 
               {/* 发布时间 */}
@@ -512,7 +512,7 @@ const CreateHomework: React.FC = () => {
                 {errors.ddlTime && (
                   <p className="mt-1 text-sm text-red-600">{errors.ddlTime}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">默认为明天上午9:00</p>
+                <p className="mt-1 text-xs text-gray-500">默认为明天上午9:00（东八区时间）</p>
               </div>
             </div>
           </div>
