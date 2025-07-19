@@ -217,16 +217,19 @@ const EditHomework: React.FC = () => {
       .map(img => img.url)
       .filter(url => !url.includes('example.com')); // 过滤示例数据
     
-    // 更新新上传图片的状态
-    setNewUploadedImages(prev => {
-      const updated = new Map(prev);
-      const key = `${taskId}-question`;
-      const existingUrls = updated.get(key) || [];
-      updated.set(key, [...existingUrls, ...newImageUrls]);
-      return updated;
-    });
-    
-    console.log('✅ 问题图片已添加到新上传列表:', { taskId, newImageUrls });
+    if (newImageUrls.length > 0) {
+      // 直接更新到主要的数据结构中
+      setHomework(prev => ({
+        ...prev,
+        taskList: prev.taskList.map(task =>
+          task.id === taskId 
+            ? { ...task, taskQuestion: [...task.taskQuestion, ...newImageUrls] }
+            : task
+        )
+      }));
+      
+      console.log('✅ 问题图片已添加到主数据结构:', { taskId, newImageUrls });
+    }
   }, []);
 
   // 处理任务答案图片变化
@@ -239,16 +242,19 @@ const EditHomework: React.FC = () => {
       .map(img => img.url)
       .filter(url => !url.includes('example.com')); // 过滤示例数据
     
-    // 更新新上传图片的状态
-    setNewUploadedImages(prev => {
-      const updated = new Map(prev);
-      const key = `${taskId}-answer`;
-      const existingUrls = updated.get(key) || [];
-      updated.set(key, [...existingUrls, ...newImageUrls]);
-      return updated;
-    });
-    
-    console.log('✅ 答案图片已添加到新上传列表:', { taskId, newImageUrls });
+    if (newImageUrls.length > 0) {
+      // 直接更新到主要的数据结构中
+      setHomework(prev => ({
+        ...prev,
+        taskList: prev.taskList.map(task =>
+          task.id === taskId 
+            ? { ...task, taskAnswer: [...task.taskAnswer, ...newImageUrls] }
+            : task
+        )
+      }));
+      
+      console.log('✅ 答案图片已添加到主数据结构:', { taskId, newImageUrls });
+    }
   }, []);
 
   // 删除现有问题图片
@@ -279,21 +285,6 @@ const EditHomework: React.FC = () => {
     }));
   }, []);
   
-  // 获取任务的所有图片URL（现有 + 新上传）
-  const getTaskQuestionImages = useCallback((taskId: string): string[] => {
-    const task = homework.taskList.find(t => t.id === taskId);
-    const existingImages = task?.taskQuestion || [];
-    const newImages = newUploadedImages.get(`${taskId}-question`) || [];
-    return [...existingImages, ...newImages];
-  }, [homework.taskList, newUploadedImages]);
-  
-  const getTaskAnswerImages = useCallback((taskId: string): string[] => {
-    const task = homework.taskList.find(t => t.id === taskId);
-    const existingImages = task?.taskAnswer || [];
-    const newImages = newUploadedImages.get(`${taskId}-answer`) || [];
-    return [...existingImages, ...newImages];
-  }, [homework.taskList, newUploadedImages]);
-
   // 表单验证
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -356,24 +347,13 @@ const EditHomework: React.FC = () => {
             id: task.id,
             taskTitle: task.taskTitle.trim(),
             taskDescription: task.taskDescription.trim(),
-            // 合并现有图片和新上传的图片
-            taskQuestion: getTaskQuestionImages(task.id),
-            taskAnswer: getTaskAnswerImages(task.id)
+            // 直接使用主数据结构中的图片URL
+            taskQuestion: task.taskQuestion,
+            taskAnswer: task.taskAnswer
           }))
       };
 
       console.log('📋 提交数据:', updateData);
-      
-      // 验证数据一致性
-      updateData.taskList.forEach(task => {
-        console.log(`📊 任务 ${task.id} 数据统计:`, {
-          taskTitle: task.taskTitle,
-          questionCount: task.taskQuestion.length,
-          answerCount: task.taskAnswer.length,
-          questionUrls: task.taskQuestion,
-          answerUrls: task.taskAnswer
-        });
-      });
       
       await updateHomeworkDetail(updateData);
       
