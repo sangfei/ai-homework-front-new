@@ -83,16 +83,22 @@ export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promi
       assignedDate: params.assignedDate
     });
 
-    // 构建FormData
+    // 构建URL查询参数
+    const queryParams = new URLSearchParams({
+      type: params.type.toString(),
+      tenantId: params.tenantId,
+      className: params.className,
+      userId: params.userId,
+      subject: params.subject,
+      assignedDate: params.assignedDate,
+      homeworkId: params.homeworkId.toString(),
+      taskId: params.taskId.toString(),
+    });
+
+    const urlWithParams = `${buildApiUrl(API_ENDPOINTS.HOMEWORK_UPLOAD_ATTACHMENT)}?${queryParams.toString()}`;
+
+    // 构建FormData，仅包含文件
     const formData = new FormData();
-    formData.append('type', params.type.toString());
-    formData.append('tenantId', params.tenantId);
-    formData.append('className', params.className);
-    formData.append('userId', params.userId);
-    formData.append('subject', params.subject);
-    formData.append('assignedDate', params.assignedDate);
-    formData.append('homeworkId', params.homeworkId.toString());
-    formData.append('taskId', params.taskId.toString());
     formData.append('file', params.file);
 
     // 获取访问令牌
@@ -101,13 +107,14 @@ export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promi
       throw new Error('未找到访问令牌，请重新登录');
     }
 
-    // 发送请求 - 注意：文件上传不需要设置Content-Type，让浏览器自动设置
-    const response = await fetch(buildApiUrl(API_ENDPOINTS.HOMEWORK_UPLOAD_ATTACHMENT), {
+    // 发送请求
+    const response = await fetch(urlWithParams, {
       method: 'POST',
       headers: {
         'Accept': '*/*',
         'tenant-id': params.tenantId,
         'Authorization': `Bearer ${accessToken}`
+        // 'Content-Type' is not set, letting the browser set it for multipart/form-data
       },
       body: formData
     });
