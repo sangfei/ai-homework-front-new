@@ -1,5 +1,6 @@
 import { getUserProfile } from '../services/auth';
 import { getClassById } from '../services/classes';
+import { DateUtils } from './dateUtils';
 
 // 作业提交完整流程处理
 
@@ -125,8 +126,8 @@ const buildUploadParams = async (
   
   // 格式化作业日期 - 确保使用表单中的实际日期
   const assignedDate = formData?.assignedDate
-    ? new Date(formData.assignedDate).toISOString().split('T')[0]
-    : new Date().toISOString().split('T')[0];
+    ? DateUtils.timestampToDateString(formData.assignedDate)
+    : DateUtils.toDateString(DateUtils.getTodayStart());
   
   // 获取科目 - 确保使用表单中的实际科目
   const subject = formData?.subject || '未知科目';

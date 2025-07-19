@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, X, Plus, Trash2, Calendar, Clock, Info, Upload, ZoomIn } from 'lucide-react';
+import { DateUtils } from '../../utils/dateUtils';
 import ClassSelect from '../Common/ClassSelect';
 import ImageUpload from '../Common/ImageUpload';
 import { getHomeworkDetail, updateHomeworkDetail } from '../../services/homework';
@@ -160,12 +161,12 @@ const EditHomework: React.FC = () => {
 
   // 时间戳转换为datetime-local格式
   const timestampToDateTime = (timestamp: number): string => {
-    return new Date(timestamp).toISOString().slice(0, 16);
+    return DateUtils.toDateTimeLocal(new Date(timestamp));
   };
 
   // datetime-local格式转换为时间戳
   const dateTimeToTimestamp = (dateTimeString: string): number => {
-    return new Date(dateTimeString).getTime();
+    return DateUtils.fromDateTimeLocal(dateTimeString);
   };
 
   // 处理基本信息变化

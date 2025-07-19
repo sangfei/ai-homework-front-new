@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, X, Calendar, Clock, ZoomIn } from 'lucide-react';
+import { DateUtils } from '../../utils/dateUtils';
 import ClassSelect from '../Common/ClassSelect';
 import { getHomeworkDetail } from '../../services/homework';
 import { useToast } from '../Common/Toast';
@@ -103,7 +104,7 @@ const HomeworkDetail: React.FC = () => {
   }, [homeworkId]);
 
   const timestampToDateTime = (timestamp: number): string => {
-    return new Date(timestamp).toISOString().slice(0, 16);
+    return DateUtils.toDateTimeLocal(new Date(timestamp));
   };
 
   const handleCancel = () => {
