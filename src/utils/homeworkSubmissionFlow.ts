@@ -87,21 +87,43 @@ const matchTaskIdByName = (taskName: string, homeworkDetail: any): number | null
 const buildUploadParams = (
   attachment: AttachmentInfo,
   taskId: number,
-  homeworkDetail: any
+  homeworkDetail: any,
+  formData: any
 ): any => {
   const tenantId = getTenantId();
+  const storedProfile = getUserProfile();
   
   if (!tenantId) {
     throw new Error('缺少租户ID，请重新登录');
   }
+  
+  // 获取用户ID
+  const userId = storedProfile?.id?.toString() || '144';
+  
+  // 获取班级名称 - 从表单数据或用户信息中获取
+  let className = '二年级一班'; // 默认值
+  if (formData?.deptId && typeof formData.deptId === 'number') {
+    // 这里可以根据deptId查询班级名称，暂时使用默认值
+    className = '二年级一班';
+  } else if (storedProfile?.dept?.className) {
+    className = storedProfile.dept.className;
+  }
+  
+  // 格式化作业日期
+  const assignedDate = formData?.assignedDate 
+    ? new Date(formData.assignedDate).toISOString().split('T')[0] // 转换为YYYY-MM-DD格式
+    : new Date().toISOString().split('T')[0];
+  
+  // 获取科目
+  const subject = formData?.subject || '英语';
 
   return {
     type: attachment.type,
     tenantId,
-    className: '二年级一班', // 固定值
-    userId: 144, // 固定值
-    subject: '英语', // 固定值
-    assignedDate: '2025-07-07', // 固定值
+    className,
+    userId,
+    subject,
+    assignedDate,
     homeworkId: homeworkDetail.id,
     taskId,
     file: attachment.file
@@ -162,7 +184,8 @@ const updateHomeworkDetailWithFileUrl = (
  */
 const processAttachmentsSequentially = async (
   taskMatches: TaskMatch[],
-  homeworkDetail: any
+  homeworkDetail: any,
+  formData: any
 ): Promise<void> => {
   console.log('📁 开始串行处理附件上传...');
   
@@ -187,7 +210,7 @@ const processAttachmentsSequentially = async (
         console.log(`📤 [${processedFiles}/${totalFiles}] 上传文件: ${attachment.file.name}`);
         
         // 构建上传参数
-        const uploadParams = buildUploadParams(attachment, taskMatch.taskId, homeworkDetail);
+        const uploadParams = buildUploadParams(attachment, taskMatch.taskId, homeworkDetail, formData);
         
         // 上传文件
         const fileUrl = await uploadHomeworkAttachment(uploadParams);
@@ -291,7 +314,7 @@ export const executeHomeworkSubmissionFlow = async (
     
     // 步骤4: 串行上传所有附件
     console.log('📤 步骤4: 开始上传附件...');
-    await processAttachmentsSequentially(taskMatches, creationResult.homeworkDetail);
+    await processAttachmentsSequentially(taskMatches, creationResult.homeworkDetail, requestData);
     console.log('✅ 步骤4完成 - 所有附件上传完成');
     
     // 步骤5: 显示最终结果

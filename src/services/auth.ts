@@ -47,7 +47,7 @@ let globalUserProfile: UserProfile | null = null;
 
 export const getAccessToken = (): string | null => globalAccessToken;
 export const getTenantId = (): string | null => globalTenantId;
-const getUserId = (): string | null => globalUserId;
+export const getUserId = (): string | null => globalUserId;
 export const getRefreshToken = (): string | null => globalRefreshToken;
 export const getExpiresTime = (): number | null => globalExpiresTime;
 export const getUserProfile = (): UserProfile | null => globalUserProfile;

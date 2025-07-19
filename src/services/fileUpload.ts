@@ -1,5 +1,6 @@
 import { authenticatedFetch, handleApiResponse } from '../utils/request';
-import { getTenantId } from './auth';
+import { getTenantId, getUserProfile } from './auth';
+import { getUserProfile as getUserProfileFromService } from './user';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 // 文件上传请求参数
@@ -7,7 +8,7 @@ interface FileUploadRequest {
   type: 1 | 2; // 1: 作业题目, 2: 作业答案
   tenantId: string;
   className: string;
-  userId: number;
+  userId: string;
   subject: string;
   assignedDate: string;
   homeworkId: number;
@@ -27,15 +28,59 @@ interface FileUploadResponse {
 }
 
 /**
+ * 获取当前用户ID
+ */
+const getCurrentUserId = (): string => {
+  // 优先从存储的用户信息中获取
+  const storedProfile = getUserProfile();
+  if (storedProfile && storedProfile.id) {
+    return storedProfile.id.toString();
+  }
+  
+  // 如果没有存储的用户信息，返回默认值
+  console.warn('⚠️ 未找到用户ID，使用默认值');
+  return '144'; // 默认用户ID
+};
+
+/**
+ * 验证上传参数
+ */
+const validateUploadParams = (params: FileUploadRequest): string[] => {
+  const errors: string[] = [];
+  
+  if (!params.tenantId) errors.push('租户ID不能为空');
+  if (!params.className) errors.push('班级名称不能为空');
+  if (!params.userId) errors.push('用户ID不能为空');
+  if (!params.subject) errors.push('科目不能为空');
+  if (!params.assignedDate) errors.push('作业日期不能为空');
+  if (!params.homeworkId) errors.push('作业ID不能为空');
+  if (!params.taskId) errors.push('任务ID不能为空');
+  if (!params.file) errors.push('文件不能为空');
+  if (![1, 2].includes(params.type)) errors.push('类型必须为1或2');
+  
+  return errors;
+};
+/**
  * 上传作业附件
  */
 export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promise<string> => {
   try {
+    // 参数验证
+    const validationErrors = validateUploadParams(params);
+    if (validationErrors.length > 0) {
+      throw new Error(`参数验证失败: ${validationErrors.join(', ')}`);
+    }
+    
     console.log('📤 开始上传文件:', {
       fileName: params.file.name,
       type: params.type === 1 ? '作业题目' : '作业答案',
       taskId: params.taskId,
-      homeworkId: params.homeworkId
+      homeworkId: params.homeworkId,
+      tenantId: params.tenantId,
+      className: params.className,
+      userId: params.userId,
+      subject: params.subject,
+      assignedDate: params.assignedDate
     });
 
     // 构建FormData
@@ -43,12 +88,18 @@ export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promi
     formData.append('type', params.type.toString());
     formData.append('tenantId', params.tenantId);
     formData.append('className', params.className);
-    formData.append('userId', params.userId.toString());
+    formData.append('userId', params.userId);
     formData.append('subject', params.subject);
     formData.append('assignedDate', params.assignedDate);
     formData.append('homeworkId', params.homeworkId.toString());
     formData.append('taskId', params.taskId.toString());
     formData.append('file', params.file);
+
+    // 获取访问令牌
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      throw new Error('未找到访问令牌，请重新登录');
+    }
 
     // 发送请求 - 注意：文件上传不需要设置Content-Type，让浏览器自动设置
     const response = await fetch(buildApiUrl(API_ENDPOINTS.HOMEWORK_UPLOAD_ATTACHMENT), {
@@ -56,7 +107,7 @@ export const uploadHomeworkAttachment = async (params: FileUploadRequest): Promi
       headers: {
         'Accept': '*/*',
         'tenant-id': params.tenantId,
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        'Authorization': `Bearer ${accessToken}`
       },
       body: formData
     });
