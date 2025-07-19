@@ -96,7 +96,7 @@ export const getClassSelectOptions = async (): Promise<Array<{value: number, lab
  * @param classId 班级ID
  * @returns Promise<ClassItem | null>
  */
-const getClassById = async (classId: number): Promise<ClassItem | null> => {
+export const getClassById = async (classId: number): Promise<ClassItem | null> => {
   try {
     const classList = await getClassList();
     return classList.find(item => item.id === classId) || null;
@@ -104,4 +104,3 @@ const getClassById = async (classId: number): Promise<ClassItem | null> => {
     console.error('获取班级信息失败:', error);
     throw error;
   }
-};

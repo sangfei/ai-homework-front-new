@@ -50,8 +50,10 @@ const validateUploadParams = (params: FileUploadRequest): string[] => {
   
   if (!params.tenantId) errors.push('租户ID不能为空');
   if (!params.className) errors.push('班级名称不能为空');
+  if (params.className === '未知班级') errors.push('无法获取有效的班级名称');
   if (!params.userId) errors.push('用户ID不能为空');
   if (!params.subject) errors.push('科目不能为空');
+  if (params.subject === '未知科目') errors.push('无法获取有效的科目信息');
   if (!params.assignedDate) errors.push('作业日期不能为空');
   if (!params.homeworkId) errors.push('作业ID不能为空');
   if (!params.taskId) errors.push('任务ID不能为空');

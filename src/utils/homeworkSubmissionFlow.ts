@@ -1,4 +1,5 @@
 import { getUserProfile } from '../services/auth';
+import { getClassById } from '../services/classes';
 
 // 作业提交完整流程处理
 
@@ -86,12 +87,12 @@ const matchTaskIdByName = (taskName: string, homeworkDetail: any): number | null
 /**
  * 构建文件上传参数
  */
-const buildUploadParams = (
+const buildUploadParams = async (
   attachment: AttachmentInfo,
   taskId: number,
   homeworkDetail: any,
-  formData: any
-): any => {
+  formData: CreateHomeworkRequest
+): Promise<any> => {
   const tenantId = getTenantId();
   const storedProfile = getUserProfile();
   
@@ -102,22 +103,48 @@ const buildUploadParams = (
   // 获取用户ID
   const userId = storedProfile?.id?.toString() || '144';
   
-  // 获取班级名称 - 从表单数据或用户信息中获取
-  let className = '二年级一班'; // 默认值
+  // 获取班级名称 - 根据表单中选择的deptId动态获取
+  let className = '未知班级'; // 默认值
+  
   if (formData?.deptId && typeof formData.deptId === 'number') {
-    // 这里可以根据deptId查询班级名称，暂时使用默认值
-    className = '二年级一班';
+    try {
+      // 根据deptId获取班级信息
+      const classInfo = await getClassById(formData.deptId);
+      className = classInfo?.className || `班级ID-${formData.deptId}`;
+      console.log('✅ 成功获取班级名称:', { deptId: formData.deptId, className });
+    } catch (error) {
+      console.warn('⚠️ 获取班级名称失败，使用备用方案:', error);
+      // 备用方案：使用用户信息中的班级名称
+      className = storedProfile?.dept?.className || `班级ID-${formData.deptId}`;
+    }
   } else if (storedProfile?.dept?.className) {
     className = storedProfile.dept.className;
+  } else {
+    console.warn('⚠️ 无法获取班级名称，使用默认值');
   }
   
-  // 格式化作业日期
-  const assignedDate = formData?.assignedDate 
-    ? new Date(formData.assignedDate).toISOString().split('T')[0] // 转换为YYYY-MM-DD格式
+  // 格式化作业日期 - 确保使用表单中的实际日期
+  const assignedDate = formData?.assignedDate
+    ? new Date(formData.assignedDate).toISOString().split('T')[0]
     : new Date().toISOString().split('T')[0];
   
-  // 获取科目
-  const subject = formData?.subject || '英语';
+  // 获取科目 - 确保使用表单中的实际科目
+  const subject = formData?.subject || '未知科目';
+  
+  console.log('📋 构建上传参数:', {
+    type: attachment.type,
+    tenantId,
+    className,
+    userId,
+    subject,
+    assignedDate,
+    homeworkId: homeworkDetail.id,
+    taskId,
+    fileName: attachment.file.name,
+    formDataDeptId: formData?.deptId,
+    formDataSubject: formData?.subject,
+    formDataAssignedDate: formData?.assignedDate
+  });
 
   return {
     type: attachment.type,
@@ -187,7 +214,7 @@ const updateHomeworkDetailWithFileUrl = (
 const processAttachmentsSequentially = async (
   taskMatches: TaskMatch[],
   homeworkDetail: any,
-  formData: any
+  formData: CreateHomeworkRequest
 ): Promise<void> => {
   console.log('📁 开始串行处理附件上传...');
   
@@ -212,7 +239,7 @@ const processAttachmentsSequentially = async (
         console.log(`📤 [${processedFiles}/${totalFiles}] 上传文件: ${attachment.file.name}`);
         
         // 构建上传参数
-        const uploadParams = buildUploadParams(attachment, taskMatch.taskId, homeworkDetail, formData);
+        const uploadParams = await buildUploadParams(attachment, taskMatch.taskId, homeworkDetail, formData);
         
         // 上传文件
         const fileUrl = await uploadHomeworkAttachment(uploadParams);

@@ -252,6 +252,16 @@ const CreateHomework: React.FC = () => {
     }
     
     console.log('✅ 表单验证通过，开始提交作业');
+    console.log('📋 当前表单数据:', {
+      title: formData.title,
+      deptId: formData.deptId,
+      subject: formData.subject,
+      assignedDate: formData.assignedDate,
+      publishTime: formData.publishTime,
+      ddlTime: formData.ddlTime,
+      tasksCount: tasks.filter(task => task.taskTitle.trim()).length
+    });
+    
     setIsSubmitting(true);
 
     try {
