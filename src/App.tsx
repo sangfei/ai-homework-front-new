@@ -253,40 +253,40 @@ function App() {
                           <div className="space-y-6">
                             <div>
                               <h1 className="text-2xl font-bold text-gray-900">欢迎回来，{currentUser.name}！</h1>
-                              <p className="text-gray-600">今天是个美好的教学日，让我们一起帮助学生成长。</p>
+                              <p className="text-gray-600">智飞学记是您专属的学习成长空间，让我们一起记录学习的每一步。</p>
                             </div>
                             <DashboardStats />
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">今日待办</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">学习计划</h3>
                                 <div className="space-y-3">
                                   <div className="flex items-center p-3 bg-yellow-50 rounded-lg">
                                     <div className="w-2 h-2 bg-yellow-400 rounded-full mr-3"></div>
-                                    <span className="text-sm text-gray-700">批改三年级数学作业 (36份)</span>
+                                    <span className="text-sm text-gray-700">整理数学学习笔记</span>
                                   </div>
                                   <div className="flex items-center p-3 bg-blue-50 rounded-lg">
                                     <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
-                                    <span className="text-sm text-gray-700">准备明日课程内容</span>
+                                    <span className="text-sm text-gray-700">复习英语单词</span>
                                   </div>
                                   <div className="flex items-center p-3 bg-green-50 rounded-lg">
                                     <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-                                    <span className="text-sm text-gray-700">家长会准备材料</span>
+                                    <span className="text-sm text-gray-700">阅读专业书籍</span>
                                   </div>
                                 </div>
                               </div>
                               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">最新通知</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">学习动态</h3>
                                 <div className="space-y-3">
                                   <div className="p-3 border-l-4 border-blue-400 bg-blue-50 rounded-r-lg">
-                                    <p className="text-sm text-gray-700">系统升级将于今晚22:00-24:00进行</p>
+                                    <p className="text-sm text-gray-700">新增知识归档功能，支持多维度分类</p>
                                     <p className="text-xs text-gray-500 mt-1">2小时前</p>
                                   </div>
                                   <div className="p-3 border-l-4 border-green-400 bg-green-50 rounded-r-lg">
-                                    <p className="text-sm text-gray-700">新功能：智能批改系统已上线</p>
+                                    <p className="text-sm text-gray-700">学习材料云端同步功能已优化</p>
                                     <p className="text-xs text-gray-500 mt-1">1天前</p>
                                   </div>
                                   <div className="p-3 border-l-4 border-orange-400 bg-orange-50 rounded-r-lg">
-                                    <p className="text-sm text-gray-700">月度教学质量报告可查看</p>
+                                    <p className="text-sm text-gray-700">月度学习总结报告可查看</p>
                                     <p className="text-xs text-gray-500 mt-1">3天前</p>
                                   </div>
                                 </div>
@@ -353,40 +353,40 @@ const Dashboard: React.FC<{ currentUser: any }> = ({ currentUser }) => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">欢迎回来，{currentUser.name}！</h1>
-        <p className="text-gray-600">今天是个美好的教学日，让我们一起帮助学生成长。</p>
+        <p className="text-gray-600">智飞学记是您专属的学习成长空间，让我们一起记录学习的每一步。</p>
       </div>
       <DashboardStats />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">今日待办</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">学习计划</h3>
           <div className="space-y-3">
             <div className="flex items-center p-3 bg-yellow-50 rounded-lg">
               <div className="w-2 h-2 bg-yellow-400 rounded-full mr-3"></div>
-              <span className="text-sm text-gray-700">批改三年级数学作业 (36份)</span>
+              <span className="text-sm text-gray-700">整理数学学习笔记</span>
             </div>
             <div className="flex items-center p-3 bg-blue-50 rounded-lg">
               <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
-              <span className="text-sm text-gray-700">准备明日课程内容</span>
+              <span className="text-sm text-gray-700">复习英语单词</span>
             </div>
             <div className="flex items-center p-3 bg-green-50 rounded-lg">
               <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-              <span className="text-sm text-gray-700">家长会准备材料</span>
+              <span className="text-sm text-gray-700">阅读专业书籍</span>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">最新通知</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">学习动态</h3>
           <div className="space-y-3">
             <div className="p-3 border-l-4 border-blue-400 bg-blue-50 rounded-r-lg">
-              <p className="text-sm text-gray-700">系统升级将于今晚22:00-24:00进行</p>
+              <p className="text-sm text-gray-700">新增知识归档功能，支持多维度分类</p>
               <p className="text-xs text-gray-500 mt-1">2小时前</p>
             </div>
             <div className="p-3 border-l-4 border-green-400 bg-green-50 rounded-r-lg">
-              <p className="text-sm text-gray-700">新功能：智能批改系统已上线</p>
+              <p className="text-sm text-gray-700">学习材料云端同步功能已优化</p>
               <p className="text-xs text-gray-500 mt-1">1天前</p>
             </div>
             <div className="p-3 border-l-4 border-orange-400 bg-orange-50 rounded-r-lg">
-              <p className="text-sm text-gray-700">月度教学质量报告可查看</p>
+              <p className="text-sm text-gray-700">月度学习总结报告可查看</p>
               <p className="text-xs text-gray-500 mt-1">3天前</p>
             </div>
           </div>
