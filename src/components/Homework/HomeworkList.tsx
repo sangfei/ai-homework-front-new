@@ -6,11 +6,13 @@ import { useClassSelectOptions } from '../../hooks/useClasses';
 import HomeworkCard from './HomeworkCard';
 import ClassSelect from '../Common/ClassSelect';
 import DeleteConfirmModal from '../Common/DeleteConfirmModal';
-import { deleteHomework, type HomeworkQueryParams } from '../../services/homework';
+import { deleteHomework, publishHomework, type HomeworkQueryParams } from '../../services/homework';
+import { useToast } from '../Common/Toast';
 
 const HomeworkList: React.FC = () => {
   const navigate = useNavigate();
   const { selectOptions: classOptions, loading: classLoading } = useClassSelectOptions();
+  const { success, error: showError } = useToast();
   
   // 筛选参数状态
   const [filters, setFilters] = useState<HomeworkQueryParams>({
@@ -29,6 +31,9 @@ const HomeworkList: React.FC = () => {
   // 删除确认弹窗状态
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [homeworkToDelete, setHomeworkToDelete] = useState<string | null>(null);
+  
+  // 发布状态
+  const [publishingHomeworkId, setPublishingHomeworkId] = useState<string | null>(null);
 
   // 科目选项
   const subjectOptions = [
@@ -134,6 +139,31 @@ const HomeworkList: React.FC = () => {
   const handleDeleteCancel = () => {
     setShowDeleteModal(false);
     setHomeworkToDelete(null);
+  };
+
+  // 处理发布操作
+  const handlePublish = async (homeworkId: string) => {
+    try {
+      setPublishingHomeworkId(homeworkId);
+      console.log('📤 开始发布作业，ID:', homeworkId);
+      
+      await publishHomework(Number(homeworkId));
+      
+      console.log('✅ 作业发布成功');
+      success('作业发布成功！');
+      
+      // 刷新作业列表以显示最新状态
+      refetch(filters);
+      
+    } catch (error) {
+      console.error('❌ 发布作业失败:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : '发布作业失败，请稍后重试';
+      showError(errorMessage);
+      
+    } finally {
+      setPublishingHomeworkId(null);
+    }
   };
 
   // 处理编辑操作
@@ -331,6 +361,7 @@ const HomeworkList: React.FC = () => {
                     onDelete={handleDeleteClick}
                     onGrade={handleGrade}
                     onDetail={handleDetail}
+                    onPublish={handlePublish}
                   />
                 ))}
               </div>

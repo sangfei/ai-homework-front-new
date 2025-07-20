@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Users, BookOpen, Clock, FileText, Eye, Edit, Trash2, CheckCircle } from 'lucide-react';
+import { Calendar, Users, BookOpen, Clock, FileText, Eye, Edit, Trash2, CheckCircle, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { HomeworkItem } from '../../services/homework';
 
@@ -9,6 +9,7 @@ interface HomeworkCardProps {
   onDelete?: (id: string) => void;
   onGrade?: (id: string) => void;
   onDetail?: (id: string) => void;
+  onPublish?: (id: string) => void;
 }
 
 const HomeworkCard: React.FC<HomeworkCardProps> = ({ 
@@ -16,7 +17,8 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
   onEdit, 
   onDelete, 
   onGrade,
-  onDetail
+  onDetail,
+  onPublish
 }) => {
   const navigate = useNavigate();
 
@@ -103,15 +105,17 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
 
   const handleEdit = () => {
     console.log('🔧 点击编辑按钮，作业ID:', homework.id);
-    console.log('🗑️ 点击删除按钮，作业ID:', homework.id);
     if (onEdit) {
       onEdit(homework.id);
     } else {
-      // 如果没有传入删除回调，显示确认对话框
-      if (window.confirm('确定要删除这个作业吗？删除后无法恢复。')) {
-        // 这里可以调用删除API或触发删除事件
-        console.log('用户确认删除作业:', homework.id);
-      }
+      navigate(`/homework/edit/${homework.id}`);
+    }
+  };
+
+  const handlePublish = () => {
+    console.log('📤 点击发布按钮，作业ID:', homework.id);
+    if (onPublish) {
+      onPublish(homework.id);
     }
   };
 
@@ -230,6 +234,17 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
 
       {/* 操作按钮 */}
       <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
+        {/* 发布按钮 - 仅在未发布状态时显示 */}
+        {homework.status === 0 && onPublish && (
+          <button
+            onClick={handlePublish}
+            className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Send className="w-4 h-4" />
+            <span>发布</span>
+          </button>
+        )}
+        
         <button
           onClick={handleDetail}
           className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
