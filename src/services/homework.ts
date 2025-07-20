@@ -268,3 +268,29 @@ export const deleteHomework = async (id: string | number): Promise<any> => {
     throw error;
   }
 };
+
+/**
+ * 发布作业
+ */
+export const publishHomework = async (homeworkId: number): Promise<any> => {
+  try {
+    console.log('📤 开始发布作业，ID:', homeworkId);
+    
+    // 先获取作业详情
+    const homeworkDetail = await getHomeworkDetail(homeworkId);
+    
+    // 更新状态为已发布
+    const updateData = {
+      ...homeworkDetail,
+      status: 1 // 设置为已发布状态
+    };
+    
+    // 调用更新接口
+    const result = await updateHomeworkDetail(updateData);
+    console.log('✅ 作业发布成功');
+    return result;
+  } catch (error) {
+    console.error('❌ 发布作业失败:', error);
+    throw error;
+  }
+};
