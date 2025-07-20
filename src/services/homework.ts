@@ -19,7 +19,9 @@ export interface HomeworkItem {
   ddlTime: string;
   description: string;
   taskList: TaskItem[];
-  status?: string;
+  status?: number;
+  createTime?: number;
+  updateTime?: number;
 }
 
 interface HomeworkListResponse {

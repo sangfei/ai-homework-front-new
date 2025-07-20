@@ -61,6 +61,38 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
     }
   };
 
+  // 根据数字状态获取状态样式
+  const getStatusColorByNumber = (status?: number) => {
+    switch (status) {
+      case 0:
+        return 'bg-gray-100 text-gray-800 border border-gray-300';
+      case 1:
+        return 'bg-blue-100 text-blue-800 border border-blue-300';
+      case 2:
+        return 'bg-green-100 text-green-800 border border-green-300';
+      case 3:
+        return 'bg-red-100 text-red-800 border border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border border-gray-300';
+    }
+  };
+
+  // 根据数字状态获取状态文本
+  const getStatusTextByNumber = (status?: number) => {
+    switch (status) {
+      case 0:
+        return '未发布';
+      case 1:
+        return '已发布';
+      case 2:
+        return '已完成';
+      case 3:
+        return '已截止';
+      default:
+        return '未知状态';
+    }
+  };
+
   const handleGrade = () => {
     if (onGrade) {
       onGrade(homework.id);
@@ -100,11 +132,6 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
             <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
               {homework.title}
             </h3>
-            {homework.status && (
-              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(homework.status)}`}>
-                {getStatusText(homework.status)}
-              </span>
-            )}
           </div>
           
           <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
@@ -117,6 +144,13 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
               <span>班级ID: {homework.deptId}</span>
             </div>
           </div>
+        </div>
+        
+        {/* 状态标签 - 右上角 */}
+        <div className="flex-shrink-0 ml-4">
+          <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColorByNumber(homework.status)}`}>
+            {getStatusTextByNumber(homework.status)}
+          </span>
         </div>
       </div>
 
