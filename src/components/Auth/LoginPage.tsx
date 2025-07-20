@@ -223,7 +223,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">欢迎登录</h2>
-              <p className="text-gray-600">登录您的账号，开始智能批改之旅</p>
+              <p className="text-gray-600">登录您的账号，开始纪录学习</p>
             </div>
 
             {/* 登录方式切换 */}
