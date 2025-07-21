@@ -1,6 +1,37 @@
 import { authenticatedFetch, handleApiResponse } from '../utils/request';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
+// 班级作业列表接口定义（学生作业信息）
+export interface MyTaskDetailVO {
+  myHomeworkDetailId: number;
+  homeworkTaskDetailId: number;
+  taskName: string;
+  submissions: string[];
+}
+
+export interface StudentHomeworkVO {
+  creator: number; // 学生ID
+  myTaskList: MyTaskDetailVO[];
+}
+
+export interface ClassHomeworkListResponse {
+  code: number;
+  data: {
+    pageNum: number;
+    pageSize: number;
+    total: number;
+    myHomework: StudentHomeworkVO[];
+  };
+  msg: string;
+}
+
+export interface ClassHomeworkQueryParams {
+  homeworkId: number;
+  deptId: number;
+  page?: number;
+  offset?: number;
+}
+
 // 作业接口定义
 interface TaskItem {
   taskTitle: string;
@@ -292,5 +323,38 @@ export const publishHomework = async (homeworkId: number): Promise<any> => {
   } catch (error) {
     console.error('❌ 发布作业失败:', error);
     throw error;
+  }
+};
+
+/**
+ * 获取班级作业列表（学生作业信息）
+ */
+export const getClassHomeworkList = async (params: ClassHomeworkQueryParams): Promise<ClassHomeworkListResponse['data']> => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    // 添加查询参数
+    queryParams.append('homeworkId', params.homeworkId.toString());
+    queryParams.append('deptId', params.deptId.toString());
+    if (params.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
+
+    const response = await authenticatedFetch(
+      `${buildApiUrl(API_ENDPOINTS.CLASS_HOMEWORK_LIST)}?${queryParams}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      }
+    );
+
+    return await handleApiResponse<ClassHomeworkListResponse['data']>(response);
+  } catch (error) {
+    console.error('获取班级作业列表失败:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('网络请求失败，请检查网络连接');
   }
 };

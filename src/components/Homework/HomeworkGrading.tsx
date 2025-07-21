@@ -1,116 +1,220 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Eye, BarChart3, MessageSquare, Download, Search, Filter } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import UnsubmittedStudentsModal from './UnsubmittedStudentsModal';
 import CommonErrorsModal from './CommonErrorsModal';
 import ClassSelect from '../Common/ClassSelect';
+import { getHomeworkDetail, getClassHomeworkList, type StudentHomeworkVO, type MyTaskDetailVO } from '../../services/homework';
+import { useToast } from '../Common/Toast';
 
 interface Student {
-  id: string;
+  id: number;
+  originalStudentId?: number; // 原始学生ID，用于区分同一学生的不同任务
   name: string;
   class: string;
   avatar: string;
-  submissionTime: string;
-  status: 'completed' | 'pending' | 'graded';
+  submissionTime?: string;
+  status: 'completed' | 'pending' | 'graded' | 'unsubmitted';
   score?: string;
   correctCount?: number;
   totalCount?: number;
-  image: string;
+  image?: string;
+  taskList: MyTaskDetailVO[];
+  taskName?: string; // 任务名称
+  submissionCount?: number; // 提交数量
+}
+
+interface HomeworkInfo {
+  id: number;
+  title: string;
+  subject: string;
+  publishTime: string;
+  deadline: string;
+  submissionCount: number;
+  totalStudents: number;
+  gradedCount: number;
+  correctRate: number;
 }
 
 const HomeworkGrading: React.FC = () => {
   const navigate = useNavigate();
-  const { homeworkId } = useParams();
+  const { homeworkId } = useParams<{ homeworkId: string }>();
+  const { showToast } = useToast();
   
-  const [selectedGrade, setSelectedGrade] = useState('全部班级');
-  const [selectedStatus, setSelectedStatus] = useState('全部状态');
-  const [selectedBatchStatus, setSelectedBatchStatus] = useState('全部批改状态');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('提交时间');
+  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('全部状态');
+  const [selectedBatchStatus, setSelectedBatchStatus] = useState<string>('全部批改状态');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('提交时间');
+  const [viewMode, setViewMode] = useState<'task' | 'student'>('task'); // 视图模式：按任务或按学生
   const [showUnsubmittedModal, setShowUnsubmittedModal] = useState(false);
   const [showCommonErrorsModal, setShowCommonErrorsModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [homeworkInfo, setHomeworkInfo] = useState<HomeworkInfo | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [originalStudents, setOriginalStudents] = useState<StudentHomeworkVO[]>([]);
 
-  // 模拟作业信息
-  const homeworkInfo = {
-    title: '三年级数学应用题作业',
-    publishTime: '2025-05-26 15:30',
-    deadline: '2025-05-28 23:59',
-    subject: '数学',
-    submissionCount: 36,
-    totalStudents: 42,
-    gradedCount: 28,
-    correctRate: 86.5
-  };
-
-  // 模拟学生提交数据
-  const [students] = useState<Student[]>([
-    {
-      id: '1',
-      name: '李明',
-      class: '三年级一班',
-      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100',
-      submissionTime: '05-27 09:15',
-      status: 'graded',
-      score: '12/33',
-      correctCount: 12,
-      totalCount: 33,
-      image: 'https://images.pexels.com/photos/6238050/pexels-photo-6238050.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: '2',
-      name: '张华',
-      class: '三年级一班',
-      avatar: 'https://images.pexels.com/photos/1300402/pexels-photo-1300402.jpeg?auto=compress&cs=tinysrgb&w=100',
-      submissionTime: '05-27 08:45',
-      status: 'graded',
-      score: '12/33',
-      correctCount: 12,
-      totalCount: 33,
-      image: 'https://images.pexels.com/photos/6238003/pexels-photo-6238003.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: '3',
-      name: '王芳',
-      class: '三年级二班',
-      avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
-      submissionTime: '05-27 08:30',
-      status: 'graded',
-      score: '12/33',
-      correctCount: 12,
-      totalCount: 33,
-      image: 'https://images.pexels.com/photos/6238028/pexels-photo-6238028.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: '4',
-      name: '赵强',
-      class: '三年级二班',
-      avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100',
-      submissionTime: '05-26 21:20',
-      status: 'pending',
-      image: 'https://images.pexels.com/photos/6238072/pexels-photo-6238072.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: '5',
-      name: '刘洋',
-      class: '三年级一班',
-      avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=100',
-      submissionTime: '05-26 20:15',
-      status: 'graded',
-      score: '12/33',
-      correctCount: 12,
-      totalCount: 33,
-      image: 'https://images.pexels.com/photos/6238045/pexels-photo-6238045.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: '6',
-      name: '陈静',
-      class: '三年级二班',
-      avatar: 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=100',
-      submissionTime: '05-26 19:45',
-      status: 'pending',
-      image: 'https://images.pexels.com/photos/6238055/pexels-photo-6238055.jpeg?auto=compress&cs=tinysrgb&w=300'
-    }
-  ]);
+  // 数据获取
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!homeworkId) return;
+      
+      try {
+        setLoading(true);
+        
+        // 获取作业详情
+         const homeworkDetail = await getHomeworkDetail(parseInt(homeworkId));
+         
+         // 格式化时间
+         const formatTime = (timestamp: number) => {
+           return new Date(timestamp).toLocaleString('zh-CN', {
+             year: 'numeric',
+             month: '2-digit',
+             day: '2-digit',
+             hour: '2-digit',
+             minute: '2-digit'
+           });
+         };
+         
+         setHomeworkInfo({
+           id: homeworkDetail.id,
+           title: homeworkDetail.title,
+           subject: homeworkDetail.subject,
+           publishTime: formatTime(homeworkDetail.publishTime),
+           deadline: formatTime(homeworkDetail.ddlTime),
+           submissionCount: 0, // 将从学生列表计算
+           totalStudents: 0, // 将从学生列表计算
+           gradedCount: 0, // 将从学生列表计算
+           correctRate: 0 // 将从学生列表计算
+         });
+         
+         // 获取学生作业列表
+         const studentListResponse = await getClassHomeworkList({
+           homeworkId: parseInt(homeworkId),
+           deptId: 103, // 固定班级ID
+           page: 0
+         });
+         
+         setOriginalStudents(studentListResponse.myHomework);
+         
+         // 转换数据格式 - 为每个学生的每个任务创建单独的卡片
+         const transformedStudents: Student[] = [];
+         
+         studentListResponse.myHomework.forEach((student) => {
+           if (student.myTaskList.length === 0) {
+             // 没有提交任务的学生
+             transformedStudents.push({
+               id: student.creator,
+               name: `学生${student.creator}`,
+               class: '一年级1班',
+               avatar: `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100`,
+               submissionTime: undefined,
+               status: 'unsubmitted',
+               image: undefined,
+               taskList: [],
+               taskName: '未提交'
+             });
+           } else {
+             // 为每个任务创建单独的卡片
+             student.myTaskList.forEach((task, taskIndex) => {
+               const firstImage = task.submissions.length > 0 
+                 ? `https://${task.submissions[0]}` 
+                 : undefined;
+               
+               transformedStudents.push({
+                 id: student.creator * 1000 + taskIndex, // 确保每个任务卡片有唯一ID
+                 originalStudentId: student.creator,
+                 name: `学生${student.creator}`,
+                 class: '一年级1班',
+                 avatar: `https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100`,
+                 submissionTime: '已提交',
+                 status: 'pending',
+                 image: firstImage,
+                 taskList: [task],
+                 taskName: task.taskName,
+                 submissionCount: task.submissions.length
+               });
+             });
+           }
+         });
+         
+         // 更新统计信息 - 基于原始学生数据计算
+         const uniqueStudents = new Set(studentListResponse.myHomework.map(s => s.creator));
+         const submittedStudents = new Set(
+           studentListResponse.myHomework
+             .filter(s => s.myTaskList.length > 0)
+             .map(s => s.creator)
+         );
+         
+         setHomeworkInfo(prev => prev ? {
+           ...prev,
+           submissionCount: submittedStudents.size,
+           totalStudents: uniqueStudents.size,
+           gradedCount: 0, // 暂时设为0，实际需要根据批改状态计算
+           correctRate: 0 // 暂时设为0，实际需要根据批改结果计算
+         } : null);
+        
+        setStudents(transformedStudents);
+        } catch (error) {
+          console.error('获取作业数据失败:', error);
+          showToast('获取作业数据失败', 'error');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchData();
+    }, [homeworkId, showToast]);
+  
+    // 根据视图模式处理学生数据
+    const getDisplayStudents = () => {
+      if (viewMode === 'student') {
+        // 按学生展示：合并同一学生的多个任务
+        const studentMap = new Map<number, Student>();
+        
+        students.forEach(student => {
+          const originalId = student.originalStudentId || student.id;
+          
+          if (studentMap.has(originalId)) {
+            // 合并任务
+            const existingStudent = studentMap.get(originalId)!;
+            existingStudent.taskList.push(...student.taskList);
+            
+            // 更新提交数量
+            if (student.submissionCount) {
+              existingStudent.submissionCount = (existingStudent.submissionCount || 0) + student.submissionCount;
+            }
+            
+            // 更新任务名称（显示多个任务）
+            if (student.taskName && existingStudent.taskName !== '未提交') {
+              if (existingStudent.taskName && !existingStudent.taskName.includes(student.taskName)) {
+                existingStudent.taskName += `, ${student.taskName}`;
+              } else if (!existingStudent.taskName) {
+                existingStudent.taskName = student.taskName;
+              }
+            }
+            
+            // 更新状态（如果有任何已提交的任务，状态就不是未提交）
+            if (student.status !== 'unsubmitted' && existingStudent.status === 'unsubmitted') {
+              existingStudent.status = student.status;
+              existingStudent.submissionTime = student.submissionTime;
+            }
+          } else {
+            // 创建新的学生记录
+            studentMap.set(originalId, {
+              ...student,
+              id: originalId,
+              taskList: [...student.taskList]
+            });
+          }
+        });
+        
+        return Array.from(studentMap.values());
+      } else {
+        // 按任务展示：返回原始数据
+        return students;
+      }
+    };
 
   // 错题分析数据
   const errorAnalysis = [
@@ -166,6 +270,8 @@ const HomeworkGrading: React.FC = () => {
         return <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">未批改</span>;
       case 'completed':
         return <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">已完成</span>;
+      case 'unsubmitted':
+        return <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">未提交</span>;
       default:
         return null;
     }
@@ -175,7 +281,7 @@ const HomeworkGrading: React.FC = () => {
     navigate('/homework');
   };
 
-  const handleGradeStudent = (studentId: string) => {
+  const handleGradeStudent = (studentId: number) => {
     navigate(`/homework/grading/${homeworkId}/student/${studentId}`);
   };
 
@@ -186,6 +292,33 @@ const HomeworkGrading: React.FC = () => {
   const handleShowCommonErrors = () => {
     setShowCommonErrorsModal(true);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!homeworkInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">作业信息不存在</p>
+          <button 
+            onClick={() => navigate('/homework')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            返回作业管理
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -325,6 +458,38 @@ const HomeworkGrading: React.FC = () => {
           <div className="lg:col-span-3">
             {/* 筛选条件 */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+              {/* 视图模式切换 */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-gray-700">查看模式：</span>
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode('task')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        viewMode === 'task'
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      按任务展示
+                    </button>
+                    <button
+                      onClick={() => setViewMode('student')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        viewMode === 'student'
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      按学生展示
+                    </button>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {viewMode === 'task' ? '每个任务单独显示' : '每个学生合并显示'}
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <ClassSelect
@@ -388,18 +553,95 @@ const HomeworkGrading: React.FC = () => {
 
             {/* 学生作业卡片网格 */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {students.map((student) => (
+              {getDisplayStudents().map((student) => (
                 <div key={student.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                   {/* 作业图片 */}
                   <div className="relative h-48 bg-gray-100">
-                    <img
-                      src={student.image}
-                      alt={`${student.name}的作业`}
-                      className="w-full h-full object-cover"
-                    />
+                    {student.taskList.length > 0 ? (
+                      <div className="w-full h-full">
+                        {/* 获取所有提交的图片 */}
+                        {(() => {
+                          const allSubmissions = student.taskList.flatMap(task => task.submissions);
+                          if (allSubmissions.length === 0) {
+                            return (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <div className="text-center">
+                                  <div className="text-4xl mb-2">📝</div>
+                                  <div className="text-sm">暂无图片</div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <>
+                              {/* 主图片 */}
+                              <img
+                                src={`https://${allSubmissions[0]}`}
+                                alt={`${student.name}的作业`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                              
+                              {/* 多图片缩略图 */}
+                              {allSubmissions.length > 1 && (
+                                <div className="absolute bottom-2 left-2 right-2">
+                                  <div className="flex space-x-1 overflow-x-auto">
+                                    {allSubmissions.slice(1, 4).map((submission, index) => (
+                                      <img
+                                        key={index}
+                                        src={`https://${submission}`}
+                                        alt={`提交${index + 2}`}
+                                        className="w-8 h-8 object-cover rounded border-2 border-white shadow-sm flex-shrink-0"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                        }}
+                                      />
+                                    ))}
+                                    {allSubmissions.length > 4 && (
+                                      <div className="w-8 h-8 bg-black bg-opacity-50 rounded border-2 border-white flex items-center justify-center">
+                                        <span className="text-white text-xs font-medium">+{allSubmissions.length - 4}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                        
+                        {/* 多任务标识 */}
+                        {viewMode === 'student' && student.taskList.length > 1 && (
+                          <div className="absolute top-2 left-2">
+                            <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                              {student.taskList.length}个任务
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">📝</div>
+                          <div className="text-sm">{student.status === 'unsubmitted' ? '未提交' : '暂无图片'}</div>
+                        </div>
+                      </div>
+                    )}
                     <div className="absolute top-2 right-2">
                       {getStatusBadge(student.status)}
                     </div>
+                    {/* 提交数量标识 */}
+                    {student.submissionCount && student.submissionCount > 1 && viewMode === 'task' && (
+                      <div className="absolute top-2 left-2">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                          {student.submissionCount}张图片
+                        </span>
+                      </div>
+                    )}
                   </div>
                   
                   {/* 学生信息 */}
@@ -410,9 +652,13 @@ const HomeworkGrading: React.FC = () => {
                         alt={student.name}
                         className="w-8 h-8 rounded-full object-cover"
                       />
-                      <div>
+                      <div className="flex-1">
                         <h4 className="font-medium text-gray-900">{student.name}</h4>
                         <p className="text-sm text-gray-600">{student.class}</p>
+                        {/* 任务名称 */}
+                        {student.taskName && (
+                          <p className="text-xs text-blue-600 font-medium mt-1">{student.taskName}</p>
+                        )}
                       </div>
                       {student.status === 'graded' && student.score && (
                         <div className="ml-auto">
@@ -423,16 +669,25 @@ const HomeworkGrading: React.FC = () => {
                     </div>
                     
                     <div className="text-sm text-gray-600 mb-3">
-                      {student.submissionTime}
+                      {student.submissionTime || (student.status === 'unsubmitted' ? '未提交' : '提交时间未知')}
                     </div>
                     
                     <div className="flex justify-end">
-                      <button
-                        onClick={() => handleGradeStudent(student.id)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                      >
-                        {student.status === 'graded' ? '查看批改' : '开始批改'}
-                      </button>
+                      {student.status === 'unsubmitted' ? (
+                        <button
+                          disabled
+                          className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm cursor-not-allowed"
+                        >
+                          未提交
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleGradeStudent(student.originalStudentId || student.id)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                        >
+                          {student.status === 'graded' ? '查看批改' : '开始批改'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

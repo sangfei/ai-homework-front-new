@@ -9,6 +9,8 @@ interface ApiConfig {
 const DEFAULT_API_CONFIG: ApiConfig = {
   protocol: 'https',
   host: 'www.zhifei.site',
+  // protocol: 'http',
+  // host: '192.168.1.3',
   port: 48080
 };
 
@@ -45,6 +47,7 @@ export const API_ENDPOINTS = {
   HOMEWORK_GET: '/admin-api/homework/homework-tasks/get',
   HOMEWORK_UPDATE: '/admin-api/homework/homework-tasks/update',
   HOMEWORK_UPLOAD_ATTACHMENT: '/admin-api/homework/homework-tasks/upload-independent-attachment',
+  CLASS_HOMEWORK_LIST: '/admin-api/homework/my-homework/class-homework-list',
   
   // 图片上传相关
   IMAGE_UPLOAD: '/admin-api/homework/homework-tasks/upload-image'
