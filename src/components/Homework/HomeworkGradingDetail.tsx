@@ -444,7 +444,10 @@ const HomeworkGradingDetail: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-blue-600">AI批改结果</span>
-                    <span className="text-2xl font-bold text-blue-600">{overallScores.ai.score}/{overallScores.ai.total}</span>
+                    <span className="text-2xl font-bold">
+                      <span className="text-green-600">{overallScores.ai.score}</span>
+                      <span className="text-blue-600">/{overallScores.ai.total}</span>
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <span>已批改: {overallScores.ai.correctCount} 题</span>
@@ -470,8 +473,16 @@ const HomeworkGradingDetail: React.FC = () => {
               {questions.map((question, index) => (
                 <div key={question.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-blue-600">第 {index + 1} 题</h4>
-                    <span className="text-sm font-medium text-gray-600">10分</span>
+                    <h4 className={`text-lg font-semibold ${
+                      question.isCorrect === 1 ? 'text-blue-600' : 'text-red-600'
+                    }`}>第 {index + 1} 题</h4>
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                      question.isCorrect === 1 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {question.isCorrect === 1 ? '✓ 正确' : '✗ 错误'}
+                    </span>
                   </div>
                   
                   {/* 题目内容 */}
