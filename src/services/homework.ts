@@ -9,6 +9,62 @@ export interface MyTaskDetailVO {
   submissions: string[];
 }
 
+// 获取我的作业任务详情请求参数
+export interface MyTaskDetailParams {
+  date: string;
+  studentId: string;
+}
+
+// 获取我的作业任务详情响应数据
+export interface MyTaskDetailResponse {
+  code: number;
+  data: {
+    list: {
+      homeworkTaskId: number;
+      title: string;
+      className: string;
+      subject: string;
+      assignedDate: number;
+      deadLine: number;
+      myHomeworkStatus: string;
+      myTaskList: MyTaskDetailVO[];
+    }[];
+    total: number;
+  };
+  msg: string;
+}
+
+// AI批改结果请求参数
+export interface AIHomeworkJudgeParams {
+  myHomeworkDetailId: number;
+  studentId: number;
+  subject: string;
+  limit: number;
+}
+
+// AI批改结果响应数据
+export interface AIHomeworkJudgeResponse {
+  code: number;
+  data: {
+    id: string;
+    myHomeworkDetailId: number;
+    homeworkTaskId: number;
+    question: string;
+    questionId: number;
+    submissionAnswer: string;
+    isCorrect: number;
+    answerAnalysis: string;
+    standardAnswer: string;
+    subject: string;
+    gradeId: number;
+    classId: number;
+    teacherId: number;
+    studentId: number;
+    tenantId: number;
+  }[];
+  msg: string;
+}
+
 export interface StudentHomeworkVO {
   creator: number; // 学生ID
   myTaskList: MyTaskDetailVO[];
@@ -352,6 +408,68 @@ export const getClassHomeworkList = async (params: ClassHomeworkQueryParams): Pr
     return await handleApiResponse<ClassHomeworkListResponse['data']>(response);
   } catch (error) {
     console.error('获取班级作业列表失败:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('网络请求失败，请检查网络连接');
+  }
+};
+
+/**
+ * 获取我的作业任务详情
+ */
+export const getMyTaskDetail = async (params: MyTaskDetailParams): Promise<MyTaskDetailResponse['data']> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('date', params.date);
+    queryParams.append('studentId', params.studentId);
+
+    const response = await authenticatedFetch(
+      `${buildApiUrl(API_ENDPOINTS.MY_TASK_DETAIL)}?${queryParams}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      }
+    );
+
+    return await handleApiResponse<MyTaskDetailResponse['data']>(response);
+  } catch (error) {
+    console.error('获取作业任务详情失败:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('网络请求失败，请检查网络连接');
+  }
+};
+
+/**
+ * 获取AI批改结果
+ */
+export const getAIHomeworkJudgeResult = async (params: AIHomeworkJudgeParams): Promise<AIHomeworkJudgeResponse['data']> => {
+  try {
+    console.log('📤 发送AI批改结果请求:', params);
+    
+    const response = await authenticatedFetch(
+      buildApiUrl(API_ENDPOINTS.AI_HOMEWORK_JUDGE_RESULT),
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params)
+      }
+    );
+
+    console.log('📡 收到AI批改结果响应:', response.status, response.statusText);
+    
+    const result = await handleApiResponse<AIHomeworkJudgeResponse['data']>(response);
+    console.log('✅ 获取AI批改结果成功，题目数量:', result.length);
+    return result;
+  } catch (error) {
+    console.error('获取AI批改结果失败:', error);
     if (error instanceof Error) {
       throw error;
     }
