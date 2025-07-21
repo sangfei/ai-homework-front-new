@@ -177,15 +177,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-xl">智</span>
               </div>
-              <h1 className="text-2xl font-bold">智慧家校协同平台</h1>
+              <h1 className="text-2xl font-bold">智飞学记</h1>
             </div>
             <h2 className="text-4xl font-bold leading-tight">
-              智能批改作业<br />
-              高效精准促提升
+              个人学习成长纪录<br />
+              高效知识管理空间
             </h2>
             <p className="text-blue-100 text-lg leading-relaxed">
-              基于人工智能技术，为学生提供精准的作业批改和个性化学习指导，
-              助力教育数字化转型，提升教学质量与效率。
+              智飞学记是一个专注于个人学习成长纪录的空间，一个高效的知识管理和学习资源保存空间。
+              提供学习材料保存、知识总结和归档功能，帮助您系统化管理学习资料，提升学习效率。
             </p>
           </div>
 
@@ -205,15 +205,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               <div className="w-8 h-8 bg-green-400 rounded-lg flex items-center justify-center mb-3">
                 <CheckCircle className="w-5 h-5 text-white" />
               </div>
-              <h3 className="font-semibold mb-1">智能批改</h3>
-              <p className="text-sm text-blue-100">AI自动批改，准确率高达95%</p>
+              <h3 className="font-semibold mb-1">学习材料保存</h3>
+              <p className="text-sm text-blue-100">便捷上传保存各类学习资料</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
               <div className="w-8 h-8 bg-blue-400 rounded-lg flex items-center justify-center mb-3">
                 <MessageSquare className="w-5 h-5 text-white" />
               </div>
-              <h3 className="font-semibold mb-1">个性指导</h3>
-              <p className="text-sm text-blue-100">针对性学习建议和错题分析</p>
+              <h3 className="font-semibold mb-1">知识总结</h3>
+              <p className="text-sm text-blue-100">整理总结学习内容，提升效率</p>
             </div>
           </div>
         </div>
@@ -223,7 +223,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">欢迎登录</h2>
-              <p className="text-gray-600">登录您的账号，开始智能批改之旅</p>
+              <p className="text-gray-600">登录您的账号，开始纪录学习</p>
             </div>
 
             {/* 登录方式切换 */}
@@ -465,7 +465,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           {/* 底部版权信息 */}
           <div className="text-center mt-8 text-white/80 text-sm">
             <p>登录即表示同意我们的<button className="underline hover:text-white">服务条款</button>和<button className="underline hover:text-white">隐私政策</button></p>
-            <p className="mt-2">© 2025 智慧作业 版权所有</p>
+            <div className="mt-2 space-y-1">
+              <p>© 2025 智飞学记 版权所有</p>
+              <p className="text-xs">陕ICP备2025073290号</p>
+            </div>
           </div>
         </div>
       </div>
