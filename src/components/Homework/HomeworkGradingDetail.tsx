@@ -50,13 +50,13 @@ const HomeworkGradingDetail: React.FC = () => {
   const overallScores = useMemo(() => ({
     ai: {
       score: questions.reduce((sum, q) => sum + q.aiScore, 0),
-      total: questions.length * 10, // 假设每题10分
+      total: questions.length * 1, // 假设每题1分
       correctCount: questions.filter(q => q.aiGrading === 'correct').length,
       correctRate: questions.length > 0 ? Math.round((questions.filter(q => q.aiGrading === 'correct').length / questions.length) * 100) : 0
     },
     manual: {
       score: questions.reduce((sum, q) => sum + (q.manualScore || q.aiScore), 0),
-      total: questions.length * 10,
+      total: questions.length * 1,
       correctCount: questions.filter(q => (q.manualGrading || q.aiGrading) === 'correct').length,
       correctRate: questions.length > 0 ? Math.round((questions.filter(q => (q.manualGrading || q.aiGrading) === 'correct').length / questions.length) * 100) : 0
     }
@@ -173,7 +173,7 @@ const HomeworkGradingDetail: React.FC = () => {
                 isCorrect: result.isCorrect,
                 answerAnalysis: result.answerAnalysis,
                 aiGrading: result.isCorrect === 1 ? 'correct' : 'incorrect',
-                aiScore: result.isCorrect === 1 ? 10 : 0, // 假设每题10分
+                aiScore: result.isCorrect === 1 ? 1 : 0, // 假设每题1分
                 comment: '',
                 subject: result.subject
               }));
@@ -452,7 +452,7 @@ const HomeworkGradingDetail: React.FC = () => {
                   </div>
                 </div>
                 
-                <div>
+                {/* <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-green-600">人工批改结果</span>
                     <span className="text-2xl font-bold text-green-600">{overallScores.manual.score}/{overallScores.manual.total}</span>
@@ -461,7 +461,7 @@ const HomeworkGradingDetail: React.FC = () => {
                     <span>已批改: {overallScores.manual.correctCount} 题</span>
                     <span>正确率: {overallScores.manual.correctRate}%</span>
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
 
@@ -493,7 +493,7 @@ const HomeworkGradingDetail: React.FC = () => {
                   </div>
                   
                   {/* AI批改结果 */}
-                  <div className="mb-4">
+                  {/* <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">AI批改</span>
                       <div className="flex items-center space-x-2">
@@ -511,10 +511,10 @@ const HomeworkGradingDetail: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                   
                   {/* 人工批改 */}
-                  <div className="mb-4">
+                  {/* <div className="mb-4">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-sm font-medium text-gray-700">评分结果:</span>
                     </div>
@@ -552,7 +552,7 @@ const HomeworkGradingDetail: React.FC = () => {
                       />
                       <span className="text-sm text-gray-600">/10</span>
                     </div>
-                  </div>
+                  </div> */}
                   
                   {/* 评语输入 */}
                   {/* <div className="mb-4">
