@@ -168,13 +168,6 @@ function App() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isLoggedIn) {
         console.log('📱 页面重新可见，检查Token状态');
-        // 导入tokenRefreshManager
-        import('./services/tokenRefresh').then(({ tokenRefreshManager }) => {
-          console.log('⚠️ Token状态检查功能已禁用');
-          return; // 禁用Token状态检查
-          
-          // 获取token状态
-          const tokenStatus = tokenRefreshManager.getTokenStatus();
           // Token自动刷新功能已禁用
           // const now = Date.now();
           // const expiresTime = globalExpiresTime || (now + 30 * 60 * 1000);
@@ -188,7 +181,6 @@ function App() {
           // } else {
           //   tokenRefreshManager.startAutoRefresh();
           // }
-        });
       }
     };
 
