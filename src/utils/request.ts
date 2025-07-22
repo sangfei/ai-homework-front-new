@@ -91,46 +91,18 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
       // 如果返回401，说明token可能过期
       if (response.status === 401) {
         console.warn('🔒 认证失败 (401)，尝试刷新token');
+        console.warn('⚠️ Token刷新功能已禁用，直接清除认证信息');
+        
+        // 直接清除认证信息并跳转登录页
+        clearAccessToken();
+        window.location.href = '/login';
+        throw new Error('认证失败，请重新登录');
         
         // 如果已经在刷新token，将请求加入等待队列
-        if (isRefreshing) {
-          console.log('🔄 Token刷新已在进行中，将请求加入等待队列');
-          return new Promise<Response>((resolve) => {
-            pendingRequests.push(() => {
-              console.log('🔁 重试请求:', url);
-              executeRequest().then(resolve);
-            });
-          });
-        }
-        
-        // 标记正在刷新
-        isRefreshing = true;
-        
-        try {
-          // 导入tokenRefreshManager (使用动态导入避免循环依赖)
-          const { tokenRefreshManager } = await import('../services/tokenRefresh'); 
-          
-          // 尝试刷新token
-          const refreshed = await tokenRefreshManager.manualRefresh();
-          
-          if (refreshed) {
-            console.log('✅ Token刷新成功，重试原始请求');
-            isRefreshing = false;
-            // 重试当前请求
-            return executeRequest();
-          } else {
-            console.error('❌ Token刷新失败，清除token并跳转登录页');
-            clearAccessToken();
-            window.location.href = '/login';
-            throw new Error('认证失败，请重新登录');
-          }
-        } catch (refreshError) {
-          console.error('❌ Token刷新过程出错:', refreshError);
-          isRefreshing = false;
-          clearAccessToken();
-          window.location.href = '/login';
-          throw new Error('认证失败，请重新登录');
-        }
+        // Token刷新功能已禁用，以下代码被注释
+        // if (isRefreshing) { ... }
+        // isRefreshing = true;
+        // try { ... } catch { ... }
       }
       
       return response;

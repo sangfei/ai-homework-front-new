@@ -298,6 +298,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                           errors.password ? 'border-red-300' : 'border-gray-300'
                         }`}
                         placeholder="请输入密码"
+                        autoComplete="current-password"
                       />
                       <button
                         type="button"
