@@ -287,7 +287,9 @@ const performLogin = async (
     });
 
     // 登录成功后启动Token自动刷新定时器
-    tokenRefreshManager.startAutoRefresh();
+    // Token自动刷新功能已禁用
+    // tokenRefreshManager.startAutoRefresh();
+    console.log('ℹ️ Token自动刷新功能已禁用，跳过启动');
 
     return result.data;
   } catch (error) {
@@ -317,7 +319,9 @@ export const loginWithMobile = async (
     const loginResult = await performLogin(mobile, password, tenantId);
     
     // 启动自动刷新Token
-    tokenRefreshManager.startAutoRefresh();
+    // Token自动刷新功能已禁用
+    // tokenRefreshManager.startAutoRefresh();
+    console.log('ℹ️ Token自动刷新功能已禁用，跳过启动');
     
     return loginResult;
   } catch (error) {

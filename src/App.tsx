@@ -168,19 +168,19 @@ function App() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isLoggedIn) {
         console.log('📱 页面重新可见，检查Token状态');
-        
-        // 导入tokenRefreshManager
-        import('./services/tokenRefresh').then(({ tokenRefreshManager }) => {
-          // 获取token状态
-          const tokenStatus = tokenRefreshManager.getTokenStatus();
-          
-          // 如果token即将过期（小于5分钟），主动刷新
-          if (tokenStatus.expiresIn < 5 * 60 * 1000) {
-            console.log('⚠️ 检测到Token即将过期，主动刷新');
-            tokenRefreshManager.manualRefresh();
-          } else {
-            console.log('✅ Token状态正常，剩余时间:', Math.round(tokenStatus.expiresIn / 60000), '分钟');
-          }
+          // Token自动刷新功能已禁用
+          // const now = Date.now();
+          // const expiresTime = globalExpiresTime || (now + 30 * 60 * 1000);
+          // const timeUntilExpiration = expiresTime - now;
+          // 
+          // if (timeUntilExpiration < 5 * 60 * 1000) {
+          //   console.log('⚠️ Token即将过期，立即刷新');
+          //   setTimeout(() => {
+          //     tokenRefreshManager.manualRefresh();
+          //   }, 1000);
+          // } else {
+          //   tokenRefreshManager.startAutoRefresh();
+          // }
         });
       }
     };

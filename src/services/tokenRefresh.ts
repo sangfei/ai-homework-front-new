@@ -56,6 +56,10 @@ export class TokenRefreshManager {
    * 启动自动刷新Token定时任务
    */
   startAutoRefresh(): void {
+    // 功能已禁用 - 不再执行自动刷新Token
+    console.log('⚠️ Token自动刷新功能已禁用');
+    return;
+    
     // 先停止现有的所有定时器
     this.stopAllTimers();
     
@@ -168,6 +172,10 @@ export class TokenRefreshManager {
    * 执行Token刷新
    */
   private async performTokenRefresh(retryCount = 0): Promise<boolean> {
+    // 功能已禁用 - 不再执行Token刷新
+    console.log('⚠️ Token刷新功能已禁用，跳过刷新操作');
+    return false;
+    
     // 如果已经有刷新操作在进行中，返回该Promise
     if (this.refreshPromise) {
       console.log('🔄 Token刷新正在进行中，复用现有Promise');
@@ -367,6 +375,10 @@ export class TokenRefreshManager {
    * 手动刷新Token
    */
   async manualRefresh(): Promise<boolean> {
+    // 功能已禁用 - 不再执行手动刷新
+    console.log('⚠️ 手动Token刷新功能已禁用');
+    return false;
+    
     return await this.performTokenRefresh();
   }
 
