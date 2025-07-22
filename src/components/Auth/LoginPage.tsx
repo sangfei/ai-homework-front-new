@@ -467,7 +467,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <p>登录即表示同意我们的<button className="underline hover:text-white">服务条款</button>和<button className="underline hover:text-white">隐私政策</button></p>
             <div className="mt-2 space-y-1">
               <p>© 2025 智飞学记 版权所有</p>
-              <p className="text-xs">陕ICP备2025073290号</p>
+              <p className="text-xs">陕ICP备2025073290号 陕公网安备61011302002138号</p>
             </div>
           </div>
         </div>
