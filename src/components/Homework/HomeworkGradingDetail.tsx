@@ -28,6 +28,9 @@ const HomeworkGradingDetail: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [taskDetail, setTaskDetail] = useState<MyTaskDetailResponse['data'] | null>(null);
   const [currentImages, setCurrentImages] = useState<string[]>([]);
@@ -221,11 +224,106 @@ const HomeworkGradingDetail: React.FC = () => {
   };
 
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 25, 200));
+    setZoomLevel(prev => {
+      const newLevel = Math.min(prev + 25, 200);
+      if (newLevel !== prev) {
+        resetImagePosition();
+      }
+      return newLevel;
+    });
   };
 
   const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 25, 50));
+    setZoomLevel(prev => {
+      const newLevel = Math.max(prev - 25, 50);
+      if (newLevel !== prev) {
+        resetImagePosition();
+      }
+      return newLevel;
+    });
+  };
+
+  // 重置图片位置当缩放级别改变时
+  const resetImagePosition = () => {
+    setImagePosition({ x: 0, y: 0 });
+  };
+
+  // 图片拖拽事件处理
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel > 100) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX - imagePosition.x,
+        y: e.clientY - imagePosition.y
+      });
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && zoomLevel > 100) {
+      setImagePosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleRefresh = () => {
+    // 重新加载当前图片
+    if (currentImages.length > 0) {
+      const currentImg = currentImages[currentImageIndex];
+      // 强制刷新图片，添加时间戳避免缓存
+      const refreshedUrl = currentImg.includes('?') 
+        ? `${currentImg}&t=${Date.now()}` 
+        : `${currentImg}?t=${Date.now()}`;
+      
+      // 更新图片URL
+      const newImages = [...currentImages];
+      newImages[currentImageIndex] = refreshedUrl;
+      setCurrentImages(newImages);
+    }
+  };
+
+  const handleMaximize = () => {
+    if (currentImages.length > 0) {
+      // 创建全屏模态框显示图片
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50';
+      modal.style.cursor = 'zoom-out';
+      
+      const img = document.createElement('img');
+      img.src = currentImages[currentImageIndex];
+      img.className = 'max-w-full max-h-full object-contain';
+      img.style.cursor = 'zoom-out';
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '✕';
+      closeBtn.className = 'absolute top-4 right-4 text-white text-2xl hover:text-gray-300';
+      closeBtn.style.cursor = 'pointer';
+      
+      const closeModal = () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = 'auto';
+      };
+      
+      closeBtn.onclick = closeModal;
+      modal.onclick = closeModal;
+      img.onclick = (e) => e.stopPropagation();
+      
+      modal.appendChild(img);
+      modal.appendChild(closeBtn);
+      document.body.appendChild(modal);
+      document.body.style.overflow = 'hidden';
+    }
   };
 
   const handleGradingChange = (questionId: string, grading: 'correct' | 'incorrect' | 'partial', score?: number) => {
@@ -352,6 +450,7 @@ const HomeworkGradingDetail: React.FC = () => {
                   <button
                     onClick={handleZoomOut}
                     className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    title="缩小"
                   >
                     <ZoomOut className="w-4 h-4" />
                   </button>
@@ -359,13 +458,22 @@ const HomeworkGradingDetail: React.FC = () => {
                   <button
                     onClick={handleZoomIn}
                     className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    title="放大"
                   >
                     <ZoomIn className="w-4 h-4" />
                   </button>
-                  <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  <button 
+                    onClick={handleRefresh}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    title="刷新图片"
+                  >
                     <RotateCw className="w-4 h-4" />
                   </button>
-                  <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  <button 
+                    onClick={handleMaximize}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    title="全屏查看"
+                  >
                     <Maximize2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -381,12 +489,22 @@ const HomeworkGradingDetail: React.FC = () => {
                   <img
                     src={currentImages[currentImageIndex]}
                     alt={`学生作业 第${currentImageIndex + 1}页`}
-                    className="w-full h-full object-contain"
-                    style={{ transform: `scale(${zoomLevel / 100})` }}
+                    className={`w-full h-full object-contain transition-transform ${
+                      zoomLevel > 100 ? 'cursor-grab' : 'cursor-default'
+                    } ${isDragging ? 'cursor-grabbing' : ''}`}
+                    style={{ 
+                       transform: `translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${zoomLevel / 100})`,
+                       userSelect: 'none'
+                     }}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseLeave}
                     onError={(e) => {
                       console.error('图片加载失败:', currentImages[currentImageIndex]);
                       e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5YTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD48L3N2Zz4=';
                     }}
+                    draggable={false}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full">
@@ -407,6 +525,7 @@ const HomeworkGradingDetail: React.FC = () => {
                       onClick={() => {
                         setCurrentImageIndex(index);
                         setCurrentPage(index + 1);
+                        resetImagePosition();
                       }}
                     >
                       <img
