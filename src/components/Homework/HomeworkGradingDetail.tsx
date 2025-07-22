@@ -115,7 +115,6 @@ const HomeworkGradingDetail: React.FC = () => {
         };
         
         const publishDate = formatTime(homeworkDetail.publishTime);
-        console.log('🚀 ~ fetchTaskDetail ~ publishDate:', publishDate);
         
         // 使用作业发布时间作为查询参数
         const response = await getMyTaskDetail({
@@ -127,21 +126,27 @@ const HomeworkGradingDetail: React.FC = () => {
         
         // 收集所有提交的图片
         const allImages: string[] = [];
-        response.list.forEach(homework => {
-          homework.myTaskList.forEach(task => {
-            task.submissions.forEach(submission => {
-              // 确保图片URL有https://前缀
-              const imageUrl = submission.startsWith('http') ? submission : `https://${submission}`;
-              allImages.push(imageUrl);
-            });
+        if (response.list && Array.isArray(response.list)) {
+          response.list.forEach(homework => {
+            if (homework.myTaskList && Array.isArray(homework.myTaskList)) {
+              homework.myTaskList.forEach(task => {
+                if (task.submissions && Array.isArray(task.submissions)) {
+                  task.submissions.forEach(submission => {
+                    // 确保图片URL有https://前缀
+                    const imageUrl = submission.startsWith('http') ? submission : `https://${submission}`;
+                    allImages.push(imageUrl);
+                  });
+                }
+              });
+            }
           });
-        });
+        }
         
         setCurrentImages(allImages);
         setTotalPages(allImages.length || 1);
         
         // 更新学生信息
-        if (response.list.length > 0) {
+        if (response.list && response.list.length > 0) {
           const firstHomework = response.list[0];
           setStudentInfo(prev => ({
             ...prev,
@@ -150,7 +155,7 @@ const HomeworkGradingDetail: React.FC = () => {
           }));
           
           // 获取AI批改结果
-          if (firstHomework.myTaskList.length > 0) {
+          if (firstHomework.myTaskList && firstHomework.myTaskList.length > 0) {
             const myHomeworkDetailId = firstHomework.myTaskList[0].homeworkTaskDetailId;
             
             try {

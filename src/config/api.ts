@@ -7,10 +7,10 @@ interface ApiConfig {
 
 // 默认API配置
 const DEFAULT_API_CONFIG: ApiConfig = {
-  protocol: 'https',
-  host: 'www.zhifei.site',
   // protocol: 'https',
-  // host: '192.168.1.3',
+  // host: 'www.zhifei.site',
+  protocol: 'https',
+  host: '192.168.1.3',
   port: 48080
 };
 

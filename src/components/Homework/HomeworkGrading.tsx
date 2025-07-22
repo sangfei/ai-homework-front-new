@@ -577,7 +577,7 @@ const HomeworkGrading: React.FC = () => {
                             <>
                               {/* 主图片 */}
                               <img
-                                src={`https://${allSubmissions[0]}`}
+                                src={`${allSubmissions[0]}`}
                                 alt={`${student.name}的作业`}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
