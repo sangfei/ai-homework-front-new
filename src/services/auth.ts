@@ -125,6 +125,9 @@ export const clearAccessToken = (): void => {
   // 停止Token自动刷新
   tokenRefreshManager.stopAutoRefresh();
   
+  // 注意：不清除用户名记忆Cookie，用户退出登录后仍可看到上次登录的用户名
+  console.log('🔐 认证数据已清除，但保留用户名记忆功能');
+  
   console.log('🔐 所有认证数据已清除');
 };
 

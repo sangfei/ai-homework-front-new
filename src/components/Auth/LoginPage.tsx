@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, Phone, MessageSquare, CheckCircle, AlertCircle } from 'lucide-react';
 import { loginWithMobile, initializeAuth } from '../../services/auth';
+import { storage } from '../../utils/storage';
 
 interface LoginPageProps {
   onLogin: (userData: any) => void;
@@ -11,7 +12,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const [loginType, setLoginType] = useState<'password' | 'sms'>('password');
   const [formData, setFormData] = useState({
-    username: 'admin',
+    username: '', // 将在useEffect中从Cookie读取
     password: '123456',
     phone: '',
     smsCode: '',
@@ -26,6 +27,43 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   // 初始化认证状态
   useEffect(() => {
     initializeAuth();
+  }, []);
+
+  // 页面加载时从Cookie读取用户信息
+  useEffect(() => {
+    const initializeLoginForm = () => {
+      console.log('🔄 初始化登录表单，从Cookie读取用户信息...');
+      
+      // 优先读取记住密码的用户名
+      const remembered = storage.getRememberedUsername();
+      if (remembered.username && remembered.rememberMe) {
+        console.log('✅ 发现记住密码的用户信息:', remembered.username);
+        setFormData(prev => ({
+          ...prev,
+          username: remembered.username,
+          rememberMe: true
+        }));
+        return;
+      }
+      
+      // 如果没有记住密码，则读取最后登录的用户名
+      const lastUsername = storage.getLastLoginUsername();
+      if (lastUsername) {
+        console.log('✅ 发现最后登录的用户名:', lastUsername);
+        setFormData(prev => ({
+          ...prev,
+          username: lastUsername,
+          rememberMe: false
+        }));
+        return;
+      }
+      
+      console.log('ℹ️ 未找到保存的用户信息，使用空值');
+    };
+
+    // 延迟执行，确保组件完全挂载
+    const timer = setTimeout(initializeLoginForm, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // 验证码倒计时
@@ -103,8 +141,19 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
     try {
       if (loginType === 'password') {
+        console.log('🔐 开始密码登录流程，用户名:', formData.username);
+        
         // 使用真实的登录API
         const loginResult = await loginWithMobile(formData.username, formData.password);
+        
+        // 登录成功后保存用户名到Cookie
+        console.log('✅ 登录成功，保存用户信息到Cookie');
+        
+        // 保存最后登录的用户名（总是保存）
+        storage.setLastLoginUsername(formData.username);
+        
+        // 根据记住密码选项保存或清除记住的用户名
+        storage.setRememberMe(formData.username, formData.rememberMe);
         
         // 准备用户信息
         const userData = {
@@ -117,12 +166,24 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         // 调用父组件的登录回调
         onLogin(userData);
         
+        // 登录成功后清空密码字段（安全考虑）
+        setFormData(prev => ({
+          ...prev,
+          password: '' // 清空密码，但保留用户名
+        }));
+        
         // 登录成功后跳转到首页
         console.log('✅ 登录成功，跳转到首页');
         navigate('/', { replace: true });
       } else {
         // 短信登录暂时保持模拟逻辑
         if (formData.phone === '13800138000' && formData.smsCode === '123456') {
+          console.log('✅ 短信登录成功，保存手机号到Cookie');
+          
+          // 短信登录成功后也保存手机号
+          storage.setLastLoginUsername(formData.phone);
+          storage.setRememberMe(formData.phone, false); // 短信登录不记住密码
+          
           const userData = {
             name: '李老师',
             role: '数学教师',
@@ -131,6 +192,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           
           // 调用父组件的登录回调
           onLogin(userData);
+          
+          // 清空验证码字段
+          setFormData(prev => ({
+            ...prev,
+            smsCode: ''
+          }));
           
           // 登录成功后跳转到首页
           console.log('✅ 短信登录成功，跳转到首页');
@@ -158,6 +225,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
     setLoginError('');
+  };
+
+  // 处理记住密码选项变化
+  const handleRememberMeChange = (remember: boolean) => {
+    setFormData(prev => ({ ...prev, rememberMe: remember }));
+    
+    // 如果取消记住密码，立即清除相关Cookie
+    if (!remember && formData.username) {
+      storage.clearRememberedUsername();
+      console.log('🗑️ 用户取消记住密码，已清除相关Cookie');
+    }
   };
 
   return (
@@ -267,6 +345,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                           errors.username ? 'border-red-300' : 'border-gray-300'
                         }`}
                         placeholder="请输入手机号/邮箱"
+                        autoComplete="username"
                       />
                     </div>
                     {errors.username && (
@@ -322,7 +401,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       type="checkbox"
                       id="rememberMe"
                       checked={formData.rememberMe}
-                      onChange={(e) => handleInputChange('rememberMe', e.target.checked)}
+                      onChange={(e) => handleRememberMeChange(e.target.checked)}
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-600">
