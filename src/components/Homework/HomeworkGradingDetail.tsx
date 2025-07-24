@@ -22,7 +22,7 @@ interface Question {
 
 const HomeworkGradingDetail: React.FC = () => {
   const navigate = useNavigate();
-  const { homeworkId, studentId } = useParams();
+  const { homeworkId, submissionId } = useParams();
   const { error: showError } = useToast();
   
   const [currentPage, setCurrentPage] = useState(1);
@@ -93,8 +93,8 @@ const HomeworkGradingDetail: React.FC = () => {
   // 获取作业任务详情数据
   useEffect(() => {
     const fetchTaskDetail = async () => {
-      if (!studentId || !homeworkId) {
-        showError('学生ID或作业ID无效');
+      if (!submissionId || !homeworkId) {
+        showError('提交ID或作业ID无效');
         return;
       }
 
@@ -105,43 +105,20 @@ const HomeworkGradingDetail: React.FC = () => {
         const homeworkDetail = await getHomeworkDetail(parseInt(homeworkId));
         setHomeworkSubject(homeworkDetail.subject);
         
-        // 格式化发布时间为API需要的格式
-        const formatTime = (timestamp: number) => {
-          return new Date(timestamp).toLocaleString('zh-CN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          }).replace(/\//g, '-').replace(/,/g, '');
-        };
-        
-        const publishDate = formatTime(homeworkDetail.publishTime);
-        
-        // 使用作业发布时间作为查询参数
+        // 使用新的API结构，只传入submissionId
         const response = await getMyTaskDetail({
-          date: publishDate,
-          studentId: studentId
+          submissionId: parseInt(submissionId)
         });
         
         setTaskDetail(response);
         
-        // 收集所有提交的图片
+        // 从新的API响应结构中获取图片
         const allImages: string[] = [];
-        if (response.list && Array.isArray(response.list)) {
-          response.list.forEach(homework => {
-            if (homework.myTaskList && Array.isArray(homework.myTaskList)) {
-              homework.myTaskList.forEach(task => {
-                if (task.submissions && Array.isArray(task.submissions)) {
-                  task.submissions.forEach(submission => {
-                    // 确保图片URL有https://前缀
-                    const imageUrl = submission.startsWith('http') ? submission : `https://${submission}`;
-                    allImages.push(imageUrl);
-                  });
-                }
-              });
-            }
+        if (response.submissionContent && Array.isArray(response.submissionContent)) {
+          response.submissionContent.forEach(imageUrl => {
+            // 确保图片URL格式正确，去除可能的引号和空格
+            const formattedUrl = imageUrl.trim().replace(/^["'\s]+|["'\s]+$/g, '');
+            allImages.push(formattedUrl);
           });
         }
         
@@ -149,50 +126,42 @@ const HomeworkGradingDetail: React.FC = () => {
         setTotalPages(allImages.length || 1);
         
         // 更新学生信息
-        if (response.list && response.list.length > 0) {
-          const firstHomework = response.list[0];
-          setStudentInfo(prev => ({
-            ...prev,
-            class: firstHomework.className,
-            submissionTime: new Date(firstHomework.assignedDate * 1000).toLocaleString('zh-CN')
+        setStudentInfo(prev => ({
+          ...prev,
+          submissionTime: new Date(response.createTime).toLocaleString('zh-CN')
+        }));
+        
+        // 获取AI批改结果
+        try {
+          const aiResults = await getAIHomeworkJudgeResult({
+            myHomeworkDetailId: response.homeworkTaskId,
+            studentId: response.creator,
+            subject: response.subject,
+            limit: 100
+          });
+          
+          setAiJudgeResults(aiResults);
+          
+          // 将AI批改结果转换为Question格式
+          const convertedQuestions: Question[] = aiResults.map((result, index) => ({
+            id: result.id,
+            questionId: result.questionId,
+            question: result.question,
+            submissionAnswer: result.submissionAnswer,
+            standardAnswer: result.standardAnswer,
+            isCorrect: result.isCorrect,
+            answerAnalysis: result.answerAnalysis,
+            aiGrading: result.isCorrect === 1 ? 'correct' : 'incorrect',
+            aiScore: result.isCorrect === 1 ? 1 : 0, // 假设每题1分
+            comment: '',
+            subject: result.subject
           }));
           
-          // 获取AI批改结果
-          if (firstHomework.myTaskList && firstHomework.myTaskList.length > 0) {
-            const myHomeworkDetailId = firstHomework.myTaskList[0].homeworkTaskDetailId;
-            
-            try {
-              const aiResults = await getAIHomeworkJudgeResult({
-                myHomeworkDetailId: myHomeworkDetailId,
-                studentId: parseInt(studentId),
-                subject: homeworkDetail.subject,
-                limit: 100
-              });
-              
-              setAiJudgeResults(aiResults);
-              
-              // 将AI批改结果转换为Question格式
-              const convertedQuestions: Question[] = aiResults.map((result, index) => ({
-                id: result.id,
-                questionId: result.questionId,
-                question: result.question,
-                submissionAnswer: result.submissionAnswer,
-                standardAnswer: result.standardAnswer,
-                isCorrect: result.isCorrect,
-                answerAnalysis: result.answerAnalysis,
-                aiGrading: result.isCorrect === 1 ? 'correct' : 'incorrect',
-                aiScore: result.isCorrect === 1 ? 1 : 0, // 假设每题1分
-                comment: '',
-                subject: result.subject
-              }));
-              
-              setQuestions(convertedQuestions);
-              console.log('✅ AI批改结果转换完成，题目数量:', convertedQuestions.length);
-            } catch (aiError) {
-              console.error('获取AI批改结果失败:', aiError);
-              // AI批改结果获取失败不影响主要功能
-            }
-          }
+          setQuestions(convertedQuestions);
+          console.log('✅ AI批改结果转换完成，题目数量:', convertedQuestions.length);
+        } catch (aiError) {
+          console.error('获取AI批改结果失败:', aiError);
+          // AI批改结果获取失败不影响主要功能
         }
       } catch (error) {
         console.error('获取作业任务详情失败:', error);
@@ -203,7 +172,7 @@ const HomeworkGradingDetail: React.FC = () => {
     };
 
     fetchTaskDetail();
-  }, [studentId, homeworkId]); // 添加homeworkId依赖
+  }, [submissionId, homeworkId]); // 添加homeworkId依赖
 
   const handleBack = () => {
     navigate(`/homework/grading/${homeworkId}`);
@@ -430,14 +399,12 @@ const HomeworkGradingDetail: React.FC = () => {
               {/* 任务状态 */}
               {taskDetail && (
                 <div className="mt-4 flex items-center space-x-4">
-                  {taskDetail.list.map((homework, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                        {homework.myHomeworkStatus}
-                      </span>
-                      <span className="text-sm text-gray-700">{homework.title}</span>
-                    </div>
-                  ))}
+                  <div className="flex items-center space-x-2">
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                      已提交
+                    </span>
+                    <span className="text-sm text-gray-700">{taskDetail.homeworkTitle || '作业任务'}</span>
+                  </div>
                 </div>
               )}
             </div>

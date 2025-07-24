@@ -80,15 +80,15 @@ const HomeworkCard: React.FC<HomeworkCardProps> = ({
   };
 
   // 根据数字状态获取状态文本
-  const getStatusTextByNumber = (status?: number) => {
+  const getStatusTextByNumber = (status?: string) => {
     switch (status) {
-      case 0:
+      case "UNPUBLISHED":
         return '未发布';
-      case 1:
+      case "PUBLISHED":
         return '已发布';
-      case 2:
+      case "COMPLETED":
         return '已完成';
-      case 3:
+      case "EXPIRED":
         return '已截止';
       default:
         return '未知状态';

@@ -22,6 +22,7 @@ export const buildApiUrl = (path: string, config: ApiConfig = DEFAULT_API_CONFIG
   const baseUrl = buildApiBaseUrl(config);
   // 确保路径以 / 开头
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
   return `${baseUrl}${normalizedPath}`;
 };
 
@@ -46,7 +47,7 @@ export const API_ENDPOINTS = {
   HOMEWORK_UPDATE: '/admin-api/homework/homework-tasks/update',
   HOMEWORK_UPLOAD_ATTACHMENT: '/admin-api/homework/homework-tasks/upload-independent-attachment',
   CLASS_HOMEWORK_LIST: '/admin-api/homework/my-homework/class-homework-list',
-  MY_TASK_DETAIL: '/admin-api/homework/my-homework/my-task-detail',
+  MY_TASK_DETAIL: '/admin-api/homework/my-homework/submission-detail',
   AI_HOMEWORK_JUDGE_RESULT: '/admin-api/ai/homework-submission/query',
   
   // 图片上传相关

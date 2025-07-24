@@ -3,33 +3,35 @@ import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 // 班级作业列表接口定义（学生作业信息）
 export interface MyTaskDetailVO {
-  myHomeworkDetailId: number;
-  homeworkTaskDetailId: number;
+  myHomeworkDetailId?: number;
+  homeworkTaskDetailId?: number;
+  submissionId: number;
   taskName: string;
   submissions: string[];
 }
 
 // 获取我的作业任务详情请求参数
 export interface MyTaskDetailParams {
-  date: string;
-  studentId: string;
+  submissionId: number;
 }
 
 // 获取我的作业任务详情响应数据
 export interface MyTaskDetailResponse {
   code: number;
   data: {
-    list: {
-      homeworkTaskId: number;
-      title: string;
-      className: string;
-      subject: string;
-      assignedDate: number;
-      deadLine: number;
-      myHomeworkStatus: string;
-      myTaskList: MyTaskDetailVO[];
-    }[];
-    total: number;
+    id: number;
+    homeworkId: number;
+    homeworkTitle: string;
+    homeworkTaskId: number;
+    taskTitle: string;
+    taskDescription: string;
+    subject: string;
+    assignedDate: number;
+    status: string;
+    submissionContent: string[];
+    createTime: number;
+    creator: number;
+    creatorName: string;
   };
   msg: string;
 }
@@ -421,8 +423,7 @@ export const getClassHomeworkList = async (params: ClassHomeworkQueryParams): Pr
 export const getMyTaskDetail = async (params: MyTaskDetailParams): Promise<MyTaskDetailResponse['data']> => {
   try {
     const queryParams = new URLSearchParams();
-    queryParams.append('date', params.date);
-    queryParams.append('studentId', params.studentId);
+    queryParams.append('submissionId', params.submissionId.toString());
 
     const response = await authenticatedFetch(
       `${buildApiUrl(API_ENDPOINTS.MY_TASK_DETAIL)}?${queryParams}`,

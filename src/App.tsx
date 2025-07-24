@@ -235,7 +235,7 @@ function App() {
           <Routes>
             <Route path="/homework/create" element={<CreateHomework />} />
             <Route path="/homework/grading/:homeworkId" element={<HomeworkGrading />} />
-            <Route path="/homework/grading/:homeworkId/student/:studentId" element={<HomeworkGradingDetail />} />
+            <Route path="/homework/grading/:homeworkId/submission/:submissionId" element={<HomeworkGradingDetail />} />
             <Route path="/homework/grading/:homeworkId/analysis" element={<OverallAnalysis />} />
             <Route path="/homework/edit/:homeworkId" element={<EditHomework />} />
             <Route path="/homework/detail/:homeworkId" element={<HomeworkDetail />} />

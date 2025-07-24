@@ -281,8 +281,8 @@ const HomeworkGrading: React.FC = () => {
     navigate('/homework');
   };
 
-  const handleGradeStudent = (studentId: number) => {
-    navigate(`/homework/grading/${homeworkId}/student/${studentId}`);
+  const handleGradeStudent = (submissionId: number) => {
+    navigate(`/homework/grading/${homeworkId}/submission/${submissionId}`);
   };
 
   const handleShowUnsubmitted = () => {
@@ -682,7 +682,11 @@ const HomeworkGrading: React.FC = () => {
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleGradeStudent(student.originalStudentId || student.id)}
+                          onClick={() => {
+                            // 获取第一个任务的submissionId
+                            const submissionId = student.taskList.length > 0 ? student.taskList[0].submissionId : student.id;
+                            handleGradeStudent(submissionId);
+                          }}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
                         >
                           {student.status === 'graded' ? '查看批改' : '开始批改'}
